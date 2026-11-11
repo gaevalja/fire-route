@@ -2,7 +2,7 @@
 
 ## 1. Scope and source gate
 
-This is a future deployment runbook with acceptance gates. No installation, server change or deployment has been performed for this document revision.
+This is a future deployment runbook with acceptance gates. No MEC/shared-server installation or deployment has been performed by the agent. A separate P0 local IN-CSE Compose profile and T05 runner now exist; their actual execution is tracked in STATUS.md and does not count as Option C.
 
 Preferred source: [official STF_685/deploy repository](https://labs.etsi.org/rep/mec/etsi-mec-sandbox/-/tree/STF_685/deploy). Reference hosted environment: [Hosted Sandbox](https://82.112.253.59/). Do not disable certificate verification to reach it or infer current API availability from the URL.
 

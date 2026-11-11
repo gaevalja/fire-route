@@ -17,7 +17,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: onem2m/ group creation, accepted member URIs, fan-out results; simulator/ independent consumers.
 - Verify: T05–T07; inspect group/member count, three command CINs, actual callbacks and ACKs.
 - Judge evidence: sanitized request/aggregate response, tree/resource IDs and demo segment.
-- Current status: NOT_STARTED / NOT_RUN. Gap: no CSE client, resources or executed fan-out.
+- Current status: VERIFIED for the selected local Group function: actual P1_GROUP PASS proves four fopt operations, 12 member command CINs, independent ACKs and a stopped-device incomplete case. Evidence/audit are indexed in STATUS. This demonstrates the selected complex service; final Expert scoring remains the judges' assessment.
 
 ### 2. Use of appropriate communication protocols — selected
 
@@ -35,7 +35,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: real SUB → compute → route CIN → GRP/fopt → ACK; shared live incident/version.
 - Verify: T01–T07, T15, T18–T20 and integrated scenario.
 - Judge evidence: one correlated run spanning both roles, resource tree and error cases.
-- Current status: NOT_STARTED / NOT_RUN. Gap: documentation and graph only.
+- Current status: IMPLEMENTED_UNVERIFIED for the full scenario; actual P1_GROUP PASS proves sensor → notification → computed route CIN → real fan-out → simulated device application/ACK. Both live role views and synthetic occupants remain unimplemented; no complete multi-application scenario score is claimed.
 
 ### 4. Quality of Article — selected
 
@@ -62,7 +62,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: source, lockfiles, README, setup/test commands, CI, licenses, evidence index and article link.
 - Verify: new environment reproduction from the release commit; link/secret/license review.
 - Judge evidence: public repository/release URL, CI output and reproduction log.
-- Current status: NOT_STARTED / NOT_RUN for the submission repository. Gap: docs revised, but no usable Git metadata, remote, executable setup or publication.
+- Current status: PARTIAL implementation for the standalone submission repository. Actual T05/P1_ROUTES/P1_GROUP evidence is recorded and the user requested a feature-branch checkpoint commit/push. Gap: remote publication must be confirmed from Git output; fresh-clone reproduction, executed CI, release and article link remain unverified.
 
 ### 7. Promotion of oneM2M — supporting
 
@@ -98,7 +98,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: TLS/CA configuration, role credentials, CSE ACPs, backend authorization, secret-safe logs.
 - Verify: T09 and T15; permit intended actions, deny unauthorized writes/reads and identity misuse.
 - Judge evidence: transport configuration/connection proof, ACP read-back and positive/negative outputs.
-- Current status: NOT_STARTED / NOT_RUN. Gap: no credentials/authentication/ACP/TLS verification; VPN alone does not satisfy this row.
+- Current status: IMPLEMENTED_UNVERIFIED for full security; actual P1_GROUP proves six scoped CSE denials (403/4103) and authorized traffic, including controller/device ACK forgery and resident fan-out protection. Authentication/TLS/privacy gates remain unverified, and the CSE reports a default-secret warning; header identity alone does not satisfy this row.
 
 ### 11. Data Interoperability and Discoverability — selected, tiered scope
 
@@ -165,4 +165,4 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 
 ## 3. Claim control
 
-Before submission, attach evidence for every claimed criterion in STATUS.md and article/video timestamps. Distinguish source criterion verified, feature implemented, feature tested, and judge assessment. The supplied rubric is now inspected; product functions remain unimplemented. Optional rows can be explicitly excluded. Never convert a documented plan, deployed URL, or lower-tier success into an Expert claim.
+Before submission, attach evidence for every claimed criterion in STATUS.md and article/video timestamps. Distinguish source criterion verified, feature implemented, feature tested, and judge assessment. The supplied rubric is inspected and the P0 CSE primitive slice is now verified; full selected product/scoring targets remain incomplete. Optional rows can be explicitly excluded. Never convert a documented plan, deployed URL, or lower-tier success into an Expert claim.

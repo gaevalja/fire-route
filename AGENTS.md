@@ -29,7 +29,7 @@ The latest explicit user instruction controls the authorized scope. Do not intro
 ## Engineering and data rules
 
 - Proposed greenfield stack: Python 3.12 (minimum 3.11), FastAPI/pytest; Vue 3/TypeScript/Vite; Docker Compose where supported. Preserve any existing implementation stack; verify runtime and dependencies before claiming it works.
-- Use a real configurable CSE implementation. ACME is a candidate, not an installed or fully verified choice. Check MN-CSE mode, registrar registration, release, serialization, SUB, group/fopt, ACP, discovery, and MQTT in the selected version.
+- Use a real configurable CSE implementation. Local ACME 2026.5.1 passed P0 T05, P1_ROUTES and P1_GROUP in the user's Docker environment, including actual IN-CSE resources, notifications, decisions, Group/fopt, independent simulated device ACKs and scoped ACP denials. MN-CSE/registrar, full authentication/TLS, discovery and MQTT still need verification. Use STATUS.md's evidence rather than inferring complete support.
 - Local development must be possible without the shared server: use a real local CSE, or an isolated Python CSE process if Docker is unavailable. Mock-only work may cover contracts/UI/unit tests, but cannot satisfy real-CSE gates.
 - The shared x86 Ubuntu server is for integration, demo, logs, and permitted Local Sandbox deployment. Raspberry Pi is an IoT/Edge endpoint; its model is unknown. Do not assume full Sandbox support on ARM64.
 - Define event_id, incident_id, route_version, command_id, timestamp_utc, source, and simulation provenance as appropriate to each contract. Validate inputs, idempotence, ordering, TTL, recovery, and acknowledgement identity.

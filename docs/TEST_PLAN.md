@@ -4,7 +4,7 @@
 
 Test states: NOT_RUN, PASS, FAIL, BLOCKED. Implementation states are separate: NOT_STARTED, IMPLEMENTED_UNVERIFIED, VERIFIED, BLOCKED. A test passes only after execution with recorded assertions and output. Missing infrastructure is BLOCKED/NOT_RUN with a reason, not PASS; a deliberately excluded optional test is recorded as DEFERRED scope, not a successful test.
 
-At this documentation revision all product tests below are NOT_RUN. Tests, harnesses and setup commands do not exist yet. Mock tests prove only unit/contract behavior; real-CSE and real-MEC gates require actual processes/endpoints and sanitized request/response evidence.
+P0 now provides unit tests and an explicit actual-CSE T05 runner. Unit fixtures prove only protocol/contract behavior; real-CSE and real-MEC gates require actual processes/endpoints and sanitized evidence. STATUS.md is authoritative for current results; T05 cannot PASS from unit fixtures. No product requirement is completed merely because its source or CI configuration exists.
 
 Retain existing T01–T15 IDs and add explicit deployment/occupancy/temperature/contract cases. Phase mapping is in ROADMAP.md; F IDs refer to PRD.md.
 
@@ -44,7 +44,24 @@ Retain existing T01–T15 IDs and add explicit deployment/occupancy/temperature/
 6. Collect independent ACK CINs and validate producer/resource identity, command_id, incident_id, event_id and route_version. A returned HTTP success code alone does not prove oneM2M or device success.
 7. Replay/stop/recover within declared test budgets and compare resulting resources/state. Cleanup only the run's owned resources after saving evidence; never reset a shared CSE.
 
-P0 must add exact executable install/start/bootstrap/test commands and selection markers for actual CSE/MEC tests. Candidate future commands are python -m pytest tests/unit, python -m pytest tests/integration -m real_cse, and python -m pytest tests/e2e; they are not runnable commands of the current starter. Integration selection must fail/report BLOCKED when required configuration is missing, without silently substituting mocks. Tests can run in a disposable local CSE and an authorized shared environment; record which.
+Executable P0 commands:
+
+~~~bash
+make test-unit
+make compose-check
+make p0-smoke
+make down
+~~~
+
+Offline units use python -m unittest discover -s tests/unit -v and require no third-party framework. Actual CSE selection uses make test-cse (Python >=3.11 + reachable configured CSE/callback) or python -m unittest discover -s tests/integration -v. The fully local Docker profile make p0-smoke supplies the real upstream ACME CSE and Python 3.12 receiver in one network. There is no mock switch or integration skip-to-success path. Missing runtime/network is BLOCKED with nonzero exit; protocol/identity/content mismatches are FAIL. The integration unittest intentionally fails if its selected T05 run is blocked.
+
+The CSE container writes its actually installed version/dependency list and configuration checksum to a read-only shared metadata volume. The runner writes real requests, notifications, actual resource IDs, assertions, meta/summary and tests.txt. The source commit is null inside an image without Git; a source-file manifest/hash is recorded instead. JSON evidence is sanitized, but review all artifacts before public sharing. The isolated Group/ACK runner has passed; MEC, full API authorization and complete application E2E remain unfinished.
+
+P0 checkpoint: actual T05 passed in user run evidence/20261111-100438Z-d1cfa0f4/. P1_ROUTES passed in evidence/20261111-103437Z-cff86001/, including actual temperature/smoke notifications, three hazard/route CIN pairs, duplicate controller replay, an actual old-sequence event, sensor route-write denial, resident hazard-read denial and allowed route read. STATUS.md indexes original artifacts and separate audits. Commands remain make p1-routes and make test-routes. This slice does not pass full T04/T09/T12/T15 or P1, nor claim authenticated originators, live restart recovery, device ACKs, stale-direction clearing or latency results.
+
+Actual Group gate: make p1-group, or make test-group with a configured real CSE/Python >=3.11. Each display process must register ready with its own PID/actual AE-ID and verified command SUB; the controller verifies three ACK SUBs. For baseline/A-block/no-route, require three member CREATED results, three command CIN read-backs and three independently written matching ACK CINs. Inspect each process's actual display state; no-route must remove the prior exit. Then stop display-c, persist a fourth actual route version and fan out again: require three stored command CINs but only two ACKs and INCOMPLETE with display-c missing. This expected fault must never appear in complete counts. Require separate actual denials of controller ACK forgery, device command/cross-device ACK writes and resident fan-out.
+
+Observed P1_GROUP PASS in evidence/20261111-115340Z-34c169f6/: four real route/hazard pairs, five sensor notifications including one ignored outdated event, 12 command CINs, 11 ACK CINs, three complete deliveries and one deliberately incomplete delivery. Separate artifact review passes 50 checks across 179 coordinator/device exchanges, actual PIDs/AE IDs and durable state. Evidence includes group.json, devices.json, fanout.jsonl, delivery.jsonl and per-device wire/state artifacts. This verifies actual T06 and isolated device/no-route/stopped-device subcases. Full authenticated-originator T07/T09, live expiry/old-command/restart coverage, role UI and measured latency remain separate gates. The mid canonicalization regression is covered by four additional units; raw unit fixtures are never integration evidence.
 
 ## 4. MEC verification procedure
 

@@ -14,21 +14,23 @@ Provisional shared-server starting point: Ubuntu 24.04, x86, 4–6 vCPU, 12–16
 
 ## 2. Local development paths
 
-Preferred future path: pinned Docker Compose profiles for core real-CSE development, integration tests and optional MEC integration. A CSE-only profile must run without MEC credentials. The full Sandbox may have its own official deployment tooling; do not assume it can be placed in an arbitrary Compose service.
+The core Docker Compose profile now passes actual local T05 on ACME 2026.5.1 / Python 3.12.16. Additional profiles for full fire-response E2E and optional MEC integration remain future work. The CSE-only profile runs without MEC credentials. The full Sandbox may have its own official deployment tooling; do not assume it can be placed in an arbitrary Compose service. mec/risk/ is local deterministic graph code, not an installed MEC service.
 
 Alternative when Docker is unavailable: isolated Python >=3.11 (3.12 proposed) running the selected real CSE and backend processes, a separately configured MQTT broker when needed, and frontend dev tooling. Verify Python/CSE compatibility and dependency pins first. Unit tests, pure routing and labeled UI previews can proceed before CSE/MEC access; they do not satisfy integration gates.
 
-Required future onboarding commands: install dependencies, start/stop core, probe CSE, bootstrap namespaced resources, run unit/CSE/E2E tests, collect sanitized evidence, recover/restart. No Makefile, Compose file or executable setup/test commands exist yet. P0 must implement and document exact commands, including cleanup limited to the developer's test resources.
+Implemented core commands: make test-unit, make compose-check, make up-core, make test-cse, make p0-smoke and make down. make p0-smoke, make p1-routes and make p1-group have actual local PASS records; make test-routes/make test-group select a configured CSE/Python >=3.11 instead. The group runner spawns three independent Python processes, not three physical nodes, with own callbacks on base bind port+1/+2/+3. Internal defaults are 8000–8003; no extra host ports are exposed. Each profile uses its own service name/run-owned resources. Run one smoke profile at a time; none requires MEC credentials. make down handles all three profiles and preserves volumes. MEC/shared deployment and shared CSE reset/cleanup remain unimplemented.
 
-## 3. Current local observations (2026-11-10)
+## 3. Local observations and subsequent verification (2026-11-10–11)
 
-This workspace is WSL2, not evidence of a configured shared Ubuntu server. Earlier read-only inventory observed Python 3.10.12, Node 24.22.1, npm 11.19.1 and uv in PATH; Python >=3.11 was not found in PATH. Docker/Compose CLIs exist; docker ps showed no running containers, while image listing failed with socket permission denied. No .env, package manifest, service implementation or integration evidence is present. Recheck all runtime observations during P0; do not convert CLI presence into deployment readiness.
+This workspace is WSL2, not evidence of a configured shared Ubuntu server. Earlier read-only agent inventory observed Python 3.10.12, Node 24.22.1, npm 11.19.1 and uv in PATH; Python >=3.11 was not found in PATH. Docker/Compose CLIs exist; direct agent access to the Docker API is restricted. No actual .env was present at reconnaissance. P0 now adds pyproject metadata, source modules, Compose and tests.
 
-The project checkout is now fire-route beneath the workspace parent. The parent .git is empty and git status does not identify a repository; no Git history was found or rewritten. Configure a real personal clone/repository before applying the team Git workflow. The GitHub organization/owner and remote URL remain unknown.
+The user's terminal can build/run Docker. Actual run evidence/20261111-100438Z-d1cfa0f4/ now verifies T05 with ACME 2026.5.1, Python 3.12.16, x86_64, standalone IN-CSE and release 4. It does not establish shared-server/MEC readiness. The smoke runner passed before Compose stopped the services; post-test CSE exit 137 needs state/shutdown investigation. The default CSE-secret warning remains a shared-deployment blocker; the isolated local profile is not the full security profile. make up-core keeps the CSE running for further local development, while make p0-smoke intentionally stops its stack after the selected runner exits.
+
+The project checkout is now fire-route beneath the workspace parent. At reconnaissance the parent .git was empty and no project Git history existed. The user subsequently initialized the nested repository, merged its Apache-2.0 LICENSE and pushed main to https://github.com/gaevalja/fire-route.git (a6e3509). P0 work is isolated on feature/p0-cse-foundation. Branch protection/team/deployer permissions remain unverified.
 
 ## 4. Configuration inventory
 
-.env.example currently has example CSE/MEC values only and no settings loader. Preserve it until P0 adds validated runtime configuration. The following additional keys/groups are a contract proposal, not supported options of a CSE binary.
+.env.example and backend/config.py now implement the local P0 CSE/callback/time-budget settings. Environment variables override literal .env assignments without shell evaluation. The P0 runner accepts only real CSE + unavailable MEC + simulator input. Role/registrar/MQTT/MEC integration keys below remain proposals/reserved settings, not implemented options of a CSE binary. Delivery retry/TTL/ACK budgets are declared for P1; P0 only applies request/startup/notification deadlines and resource retention.
 
 | Group | Current/proposed application configuration | Required validation |
 |---|---|---|

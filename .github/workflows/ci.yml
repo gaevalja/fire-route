@@ -1,0 +1,59 @@
+name: oneM2M foundation and route persistence
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - run: make test-unit
+      - run: python -m compileall -q backend onem2m simulator mec infra tests
+
+  actual-cse:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: make compose-check
+      - run: make p0-smoke
+      - run: make p1-routes
+      - run: make p1-group
+      - name: Save local development CSE evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-actual-cse-evidence
+          if-no-files-found: warn
+          path: |
+            evidence/**/meta.json
+            evidence/**/summary.json
+            evidence/**/assertions.json
+            evidence/**/resources.json
+            evidence/**/requests.jsonl
+            evidence/**/events.jsonl
+            evidence/**/notifications.jsonl
+            evidence/**/decisions.jsonl
+            evidence/**/group.json
+            evidence/**/devices.json
+            evidence/**/fanout.jsonl
+            evidence/**/delivery.jsonl
+            evidence/**/device.json
+            evidence/**/tests.txt
+      - if: always()
+        run: make down

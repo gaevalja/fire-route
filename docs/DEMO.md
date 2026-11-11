@@ -24,14 +24,14 @@ If MEC is blocked, replace its segment with the exact missing integration and wo
 
 ## 3. Submission inventory — complete by 2026-11-20
 
-- GitHub fire-route repository/release: source navigation, real commands, version pins, synthetic fixtures, tests, licenses/notices and sanitized evidence index. Remote owner is not yet configured.
+- GitHub fire-route repository/release: source navigation, real commands, version pins, synthetic fixtures, tests, licenses/notices and sanitized evidence index. Repository https://github.com/gaevalja/fire-route exists; executable release/reproduction evidence is still pending.
 - Article: system/service overview, hardware/simulator inventory, resource model, protocol rationale, Option C/actual fallback, security/privacy, measured results, oneM2M benefits, limitations and reproduction instructions. Confirm actual publishing platform; rubric refers to hackster.io.
 - Video: legible screens/logs, intelligible narration, mode labels, source/run IDs, useful pacing and tested playback/link accessibility. Confirm file/link/length rules.
 - Presentation: architecture/Cloud registration, demo flow, resource/protocol choices, project value, results, remaining gaps and team contributions.
 - Backup: a genuine prior run, timestamped sanitized traces, pinned artifact/configuration version and recovery procedure.
 - Submission receipt: record final links/files, exact submitted version, cutoff/timezone and confirmation. Required portal/formats are not yet independently verified.
 
-The [organizer publication notice](https://estimed.etsi.org/news/estimed_hackathon2/) specifies Apache-2.0 for source and CC BY 4.0 for non-code outputs. P4 must add appropriate files/attribution while retaining third-party license terms; none is implemented by this storyboard.
+The [organizer publication notice](https://estimed.etsi.org/news/estimed_hackathon2/) specifies Apache-2.0 for source and CC BY 4.0 for non-code outputs. The source Apache-2.0 LICENSE now exists. P4 must finish documentation licensing/attribution and third-party notices while retaining their original terms; no publication is performed by this storyboard.
 
 ## 4. Rehearsal and interviews
 

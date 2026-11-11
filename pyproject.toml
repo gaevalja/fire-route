@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fire-route"
+version = "0.1.0"
+description = "FireRoute actual oneM2M CSE integration foundation"
+requires-python = ">=3.11"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+dependencies = []
+
+[project.scripts]
+fire-route-p0 = "backend.p0:main"
+fire-route-p1-routes = "backend.p1_routes:main"
+fire-route-p1-group = "backend.p1_group:main"
+
+[tool.setuptools.packages.find]
+include = ["backend*", "onem2m*", "simulator*", "mec*"]
+namespaces = false
+
+[tool.setuptools.data-files]
+"share/fire-route/fixtures" = ["fixtures/building_3f.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/unit"]
+markers = ["real_cse: requires an actual CSE and reachable notification receiver"]

@@ -2,9 +2,48 @@
 
 **FireRoute: Intelligent Fire Evacuation and Rescue Guidance System**
 
-A simulation-based PoC for the 2026 oneM2M × ETSI MEC international hackathon. GitHub repository and checkout directory: **fire-route**. The GitHub owner/remote URL is not yet configured.
+A simulation-based PoC for the 2026 oneM2M × ETSI MEC international hackathon. GitHub repository and checkout directory: **fire-route**. Repository: [gaevalja/fire-route](https://github.com/gaevalja/fire-route).
 
-> Current state: specifications and a synthetic building fixture only. No service implementation or real CSE/MEC integration has passed acceptance tests. See [STATUS](docs/STATUS.md).
+> Current state: actual T05, P1_ROUTES and P1_GROUP passed on ACME 2026.5.1 / Python 3.12.16. The verified backend loop covers notifications → computed route CINs → Group/fopt → three simulated display processes and ACKs. Normal A/B/no-route delivery and a deliberately stopped device were checked, including six actual ACP denials. Dashboards and MEC integration remain unimplemented. Post-test CSE shutdown and shared-profile security remain open. See [STATUS](docs/STATUS.md).
+
+## Run the P0 foundation
+
+The protocol core has no third-party runtime dependencies. Product runtime: Python >=3.11; local container target: Python 3.12. Read [P0 scope and limitations](docs/IMPLEMENTATION_P0.md).
+
+~~~bash
+# Offline protocol/contract tests; unit transport fixtures are explicitly simulated.
+make test-unit
+
+# Actual ACME CSE + actual SUB verification/CIN notification in isolated local Docker.
+make p0-smoke
+
+# Actual P1 notification -> computed hazard/route CINs (verified local slice).
+make p1-routes
+
+# Actual Group/fopt + three display processes/ACKs (verified local backend slice).
+make p1-group
+
+# Stop project containers; keep CSE data and recorded evidence.
+make down
+~~~
+
+make p0-smoke builds the upstream acmecse==2026.5.1 package, starts a local IN-CSE, creates namespaced AEs/CNTs and verifies T05. It never selects a fake CSE or a MEC mock. A successful run prints state=PASS and stores actual meta/requests/notifications/assertions/summary/tests under evidence/<UTC-run-id>/. A blocked/failed run exits nonzero and retains its reason; no success is pre-scripted. First-time image/package downloads require working network and Docker access. The user's 2026-11-11 run passed; original artifacts and audit are indexed in STATUS. A fresh-clone/CI reproduction remains pending.
+
+The Docker CSE is exposed on 127.0.0.1:8080 only; the callback receiver is internal to its Compose network. Set CSE_HOST_PORT if the host port is occupied. Do not run simultaneous smoke jobs against one Compose project. Data volumes are preserved; resource names have unique run prefixes and expiration.
+
+The CSE launcher stages the bundled config as an owned content-hashed file in /data and passes only a filename to ACME's --config option. Existing data/config files are retained. After a launcher/config update, rerun make p0-smoke to rebuild the changed layer. The initial filename startup bug was fixed and the actual rerun passed. The smoke command stops its containers after p0 exits; use make up-core to keep only the CSE running. The observed post-test CSE exit 137 is tracked separately from T05 and still needs shutdown diagnosis. See [status and diagnosis](docs/STATUS.md).
+
+make p1-routes runs a separate owned namespace against the same real CSE. It verifies actual temperature/smoke CINs and SUB notifications, computes EXIT_A → EXIT_B → NO_VERIFIED_ROUTE, and checks the three hazard/route pairs by actual read-back. It checks controller duplicate processing, an actual outdated sensor event, sensor route-write denial, resident hazard-read denial and permitted route reads. Its PASS is only P1_ROUTES, with Group/ACK/UI/MEC explicitly unfinished. Incident/outbox recovery and ambiguous CREATE reconciliation have offline tests; actual restart/fault recovery remains unverified. With an existing reachable CSE/Python >=3.11, use make test-routes instead.
+
+make p1-group adds a real GRP of three commands containers and spawns three independent Python display processes inside the runner container. Each uses its own actual AE-ID, command SUB, durable state and ACK CIN writer; the controller consumes ACK SUBs and reads back the corresponding actual CINs. It checks A/B/no-route application, then stops display-c and requires INCOMPLETE delivery with two ACKs. Group success alone never implies device success. Ports 8000–8003 are private within the Compose network; no additional host ports are published. The 2026-11-11 actual run passed with 12 command CINs, 11 ACK CINs, three complete deliveries, one expected incomplete delivery and six ACP denials; the separate artifact audit passed 50 checks. Local Group members use actual CSE-relative container IDs, matching ACME's observed canonical mid representation. Originator authentication/TLS and full service resume remain separate gaps. Use make test-group for a configured existing CSE.
+
+To use an existing actual CSE with Python >=3.11: copy .env.example to an ignored .env only if absent, configure the actual CSE base/release/identity and a callback URL reachable from that CSE, then run make test-cse. A container CSE cannot notify a host receiver through its own 127.0.0.1. For the bundled CSE Dockerfile's process-based alternative, install acmecse==2026.5.1 in a separate environment and use infra/cse/acme.ini with host/listen/data settings adapted to your machine; the process path is not execution-verified in this sandbox.
+
+These profiles use HTTP and header-based identities on an isolated local network. They are not the authenticated HTTPS/MQTTS security submission profile. The standalone IN-CSE is not Option C and does not prove MN-to-IN registration. p0-smoke is the verified primitive loop; p1-routes is the verified route slice; p1-group is the verified isolated Group/device slice. No profile calls a MEC service. The graph module under mec/risk/ is custom local application logic; its directory name is not a MEC deployment claim.
+
+Python's standard unittest runner is used in P0; pytest can run these tests later but is not a required installed dependency. Host Python 3.10 is used only for portable offline unit checks here, not as the supported product environment. The agent sandbox denies sockets/Docker access; successful unit checks do not imply T05 PASS.
+
+CI is configured for Python 3.11/3.12 unit checks and an actual local ACME smoke job. This workflow is source configuration until it is run on GitHub; no CI badge/pass is claimed.
 
 ## Demonstration goal
 
@@ -24,19 +63,19 @@ Each developer works on a personal clone and feature/* branch; main receives rev
 
 | Path | Responsibility | Current contents |
 |---|---|---|
-| backend/ | API, incident state, event orchestration | Placeholder |
+| backend/ | API, incident state, event orchestration | P0 receiver/T05; P1 durable incident/outbox and route runner; full API pending |
 | frontend/ | Resident/responder dashboards | Placeholder |
-| simulator/ | Synthetic sensors, displays, scenarios | Placeholder |
-| onem2m/ | CSE adapter, registration, SUB, Group, ACP | Planned; directory not created |
-| mec/ | MEC app/IPE integration | Planned; directory not created |
-| infra/ | Local/shared deployment configuration | Planned; directory not created |
-| tests/ | Unit, CSE, MEC, fault and E2E tests | Planned; directory not created |
+| simulator/ | Synthetic sensors, displays, scenarios | Sensor/command/ACK contracts; actual simulated display application/ACK/clearing verified |
+| onem2m/ | CSE adapter, registration, SUB, Group, ACP | Verified local HTTP/bootstrap/decisions/Group/fopt/scoped ACPs; MQTT/full authentication pending |
+| mec/ | Edge risk logic and future MEC/IPE integration | Pure graph/synthetic policy with unit tests; no MEC API/deployment |
+| infra/ | Local/shared deployment configuration | Local CSE/core Dockerfiles and isolated Compose; MEC/shared deployment pending |
+| tests/ | Unit, CSE, MEC, fault and E2E tests | Offline unit cases + explicit actual-CSE T05 selection |
 | fixtures/ | Synthetic graph | Existing JSON preserved |
 | docs/ | Requirements, contracts, workflow and evidence rules | Revised specifications |
-| evidence/ | Sanitized executed-run evidence | Placeholder; no product run evidence |
+| evidence/ | Sanitized executed-run evidence | Ignored local run output; actual CSE PASS requires its own trace |
 | references/ | Reference index and permitted source files | Index only; external rubric inspected in place |
 
-Proposed stack: Python 3.12, FastAPI, pytest, Vue 3, TypeScript, Vite, and Docker Compose. Exact versions are selected and locked during P0. No setup/start/test commands are advertised as executable until their files exist. Local alternatives and configuration inventory are in [ENVIRONMENT](docs/ENVIRONMENT.md).
+P0 uses a dependency-free Python protocol core and Docker Compose. ACME is pinned to its published package 2026.5.1; its actual installed dependency list is captured by the CSE entrypoint. The Python image uses the 3.12-slim-bookworm family, not an immutable digest; resolve and record its digest/transitive lock before claiming fully locked deployment. FastAPI and the Vue/TypeScript/Vite frontend remain later application choices. Local alternatives and configuration are in [ENVIRONMENT](docs/ENVIRONMENT.md).
 
 ## Specifications
 
@@ -44,6 +83,7 @@ Read [AGENTS](AGENTS.md), then the following documents before implementation:
 
 | Document | Purpose |
 |---|---|
+| [P0 implementation](docs/IMPLEMENTATION_P0.md) | Current implementation slice, gates and limitations |
 | [PRD](docs/PRD.md) | Functional requirements and scope |
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | Option C, resources, module and event contracts |
 | [DEPLOYMENT](docs/DEPLOYMENT.md) | Local Sandbox/CSE plan, registration and fallback gates |
@@ -63,4 +103,4 @@ Read [AGENTS](AGENTS.md), then the following documents before implementation:
 
 All functioning software, GitHub material, article, video, and presentation files must be complete by **2026-11-20**. Interviews/presentations: November 23–25; team selection: November 26; ceremony: November 27. November 26 is user-confirmed; the public schedule independently confirms the development end, presentation period and ceremony. Exact submission cutoff/timezone and required formats remain to be checked. See [ROADMAP](docs/ROADMAP.md) and [official schedule](https://onem2m-hackathon.io/schedule.asp).
 
-Keep real .env, passwords, API tokens and SSH keys out of Git. Use per-user SSH keys and private VPN access. Raw evidence is ignored by default; select only sanitized artifacts for publication. The organizer describes Apache-2.0 for code and CC BY 4.0 for non-code outputs; license files and third-party notices remain P4 deliverables, not completed work. See [organizer publication notice](https://estimed.etsi.org/news/estimed_hackathon2/).
+Keep real .env, passwords, API tokens and SSH keys out of Git. Use per-user SSH keys and private VPN access. Raw evidence is ignored by default; select only sanitized artifacts for publication. The organizer describes Apache-2.0 for code and CC BY 4.0 for non-code outputs; the source Apache-2.0 LICENSE is present; documentation licensing and third-party publication notices remain P4 work. See [organizer publication notice](https://estimed.etsi.org/news/estimed_hackathon2/).

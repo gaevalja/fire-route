@@ -2,7 +2,7 @@
 
 ## 1. Source integration
 
-Target GitHub repository: fire-route; default branch: main. Owner/remote and team membership are not yet supplied. The current workspace has no usable Git repository metadata; do not claim branch protection, CI, remotes or existing PRs are configured.
+Target GitHub repository: fire-route; default branch: main. The user configured https://github.com/gaevalja/fire-route.git, merged the source LICENSE and pushed main (a6e3509). P0 runs on feature/p0-cse-foundation. Team membership and branch protection are still unknown; CI source has been added but no executed GitHub result or PR is claimed.
 
 Each person uses a personal clone (or isolated worktree) with Codex/IDE. Start a feature/* branch, such as feature/<module>-<task>, from current main, make a bounded change, run relevant tests, and open a PR when authorized. Integrate through reviewed PRs. Protect main with review and required CI checks when the actual repository is configured. Do not force-push shared branches or overwrite another member's uncommitted work.
 
@@ -45,4 +45,4 @@ Local CSE resources are developer/run scoped. Shared integration uses a serializ
 - P3 adds full transport/security/discovery/fault/latency evidence. P4 publication begins as an outline on day one and uses verified facts only.
 - Every merged feature updates its STATUS row and links actual evidence; the integration owner reconciles concurrent ledger changes. Resolve conflicts by preserving both workstreams' results.
 
-No remote repository, PR, branch protection, server account, CI workflow or deployment is created by this documentation revision.
+The documentation revision created no remote/server resources. The user subsequently created/pushed the repository. P0 adds local CI workflow source; it has not been executed/published by the agent. No PR, branch protection, server account or shared deployment is created.

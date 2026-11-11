@@ -1,0 +1,74 @@
+name: fire-route
+services:
+  cse:
+    stop_grace_period: 30s
+    build:
+      context: .
+      dockerfile: infra/cse/Dockerfile
+    ports:
+      - "127.0.0.1:${CSE_HOST_PORT:-8080}:8080"
+    volumes:
+      - cse-data:/data
+      - cse-metadata:/metadata
+    healthcheck:
+      test: ["CMD", "python", "/opt/fire-route/healthcheck.py"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+  p0:
+    profiles: ["smoke"]
+    build: &core_build
+      context: .
+      dockerfile: infra/core.Dockerfile
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    depends_on:
+      cse:
+        condition: service_healthy
+    environment: &core_environment
+      CSE_BASE_URL: http://cse:8080
+      CSE_BASE_RESOURCE: fire-route-dev
+      CSE_RELEASE: "4"
+      CSE_ORIGINATOR: CAdmin
+      CSE_MODE: real
+      MEC_MODE: unavailable
+      DEMO_MODE: simulator
+      NOTIFICATION_PUBLIC_URL: http://p0:8000/onem2m/notify
+      NOTIFICATION_BIND_HOST: 0.0.0.0
+      NOTIFICATION_BIND_PORT: "8000"
+      CSE_RUNTIME_INFO: /metadata/cse.json
+      EVIDENCE_ROOT: /app/evidence
+    volumes:
+      - ./evidence:/app/evidence
+      - cse-metadata:/metadata:ro
+  p1-routes:
+    profiles: ["routes"]
+    build: *core_build
+    entrypoint: ["python", "-m", "backend.p1_routes"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    depends_on:
+      cse:
+        condition: service_healthy
+    environment:
+      <<: *core_environment
+      NOTIFICATION_PUBLIC_URL: http://p1-routes:8000/onem2m/notify
+    volumes:
+      - ./evidence:/app/evidence
+      - cse-metadata:/metadata:ro
+  p1-group:
+    profiles: ["group"]
+    build: *core_build
+    entrypoint: ["python", "-m", "backend.p1_group"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    depends_on:
+      cse:
+        condition: service_healthy
+    environment:
+      <<: *core_environment
+      NOTIFICATION_PUBLIC_URL: http://p1-group:8000/onem2m/notify
+    volumes:
+      - ./evidence:/app/evidence
+      - cse-metadata:/metadata:ro
+volumes:
+  cse-data:
+  cse-metadata:
