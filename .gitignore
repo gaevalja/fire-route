@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+.pytest_cache/
+.venv/
+node_modules/
+dist/
+build/
+*.log
+*.sqlite3
+.DS_Store
+# local evidence may contain tokens until sanitized; explicitly curate before publishing
+evidence/*
+!evidence/.gitkeep

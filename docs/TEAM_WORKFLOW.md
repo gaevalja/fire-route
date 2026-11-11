@@ -1,0 +1,48 @@
+# FireRoute team workflow and module ownership
+
+## 1. Source integration
+
+Target GitHub repository: fire-route; default branch: main. Owner/remote and team membership are not yet supplied. The current workspace has no usable Git repository metadata; do not claim branch protection, CI, remotes or existing PRs are configured.
+
+Each person uses a personal clone (or isolated worktree) with Codex/IDE. Start a feature/* branch, such as feature/<module>-<task>, from current main, make a bounded change, run relevant tests, and open a PR when authorized. Integrate through reviewed PRs. Protect main with review and required CI checks when the actual repository is configured. Do not force-push shared branches or overwrite another member's uncommitted work.
+
+The shared server runs integration/demo from a deployment-owned checkout or pinned artifacts. Developers do not concurrently edit its worktree. Deploy a reviewed commit/digest through one deployment owner; each developer uses their own checkout for debugging. Server hotfixes must return through a reviewed source change before the next deployment.
+
+## 2. Parallel workstreams
+
+Roles below are assignments to fill, not assumed team size or named individuals. One person may own several roles; assign a primary owner and reviewer in the work board before implementation.
+
+| Workstream | Owned paths | Independent early work | Integration dependency |
+|---|---|---|---|
+| oneM2M | onem2m/ | CSE client, AE/CNT/CIN/SUB, Group/ACP/discovery contracts | Real CSE runtime from infra; schemas from contracts |
+| Risk/backend | mec/ risk core; backend/ orchestration | Graph logic, incident ordering/outbox, role read models | Client interface; simulator event contract |
+| Devices/scenarios | simulator/, fixtures/ additions | Seeded temperature/smoke events, display consumers, synthetic occupants | CSE client and command/ACK contract |
+| UI | frontend/ | Role views, status/ACK display with labeled contract fixtures | Versioned API/auth contract and later live backend |
+| MEC/DevOps | mec/ IPE/service adapters; infra/ | Source access, guide review, x86 inventory, Option C assessment | Actual repository permission, host authorization; later CSE/E2E |
+| QA/evidence/publication | tests/, docs/ | Acceptance cases, evidence format, article/video outline | Per-feature runtime evidence before claims |
+
+The two mec/ responsibilities require separate subdirectories/owners (risk/ vs interworking/) when created. Avoid file-level overlap. Shared pyproject/lockfiles, Compose, event schemas, API schema, README and STATUS changes need a named editor/reviewer for that change.
+
+## 3. Contracts and pull requests
+
+ARCHITECTURE.md is the current contract source. P0 creates executable schemas and interface definitions; changes to those contracts need review by producer and consumer owners. Agree schema_version, event/command correlation, status/error states and role visibility before parallel implementation. Do not silently change payload fields in one module.
+
+PR content must state the concrete problem/result, owned scope, contract/config changes, dependency reason/version, executed test commands/results, real-versus-simulated evidence, remaining gaps and rollback/recovery impact. A missing environment is an explicit NOT_RUN/BLOCKED check, not a green integration badge. Unit mocks are labeled.
+
+Run fast deterministic unit/contract checks on PRs. Real CSE tests use disposable isolated resource namespaces; real MEC tests run in the permitted integration environment with secret injection, not from untrusted PR code. Required checks and secrets boundaries must be configured in the real repository before claiming CI coverage.
+
+## 4. Environments and access
+
+Use private Tailscale/existing VPN and individual SSH public keys. Never share passwords, SSH private keys, CSE bootstrap credentials or API tokens. Ordinary developers do not require production/demo deployment privileges. Deployment owners manage the ignored environment file and service access. Public .env.example contains placeholders only.
+
+Local CSE resources are developer/run scoped. Shared integration uses a serialized test/deployment owner or isolated resource prefixes. Cleanup may delete only resources owned by that test run. Record ownership labels and verify before deletion; do not reset a shared CSE for convenience.
+
+## 5. Checkpoints and merge order
+
+- Merge P0 contracts/client/runtime first; risk, scenario and UI work may proceed independently against the agreed interface.
+- Integrate sensor → notification → controller → route before Group/ACK/live views. P1 requires the complete live loop, including all three displays and baseline permissions.
+- MEC source/host investigation starts beside P0; P2 deploys against the pinned P1 artifact. Preserve a working CSE-only demo during permitted integration changes.
+- P3 adds full transport/security/discovery/fault/latency evidence. P4 publication begins as an outline on day one and uses verified facts only.
+- Every merged feature updates its STATUS row and links actual evidence; the integration owner reconciles concurrent ledger changes. Resolve conflicts by preserving both workstreams' results.
+
+No remote repository, PR, branch protection, server account, CI workflow or deployment is created by this documentation revision.

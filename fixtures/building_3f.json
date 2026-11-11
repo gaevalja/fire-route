@@ -1,0 +1,125 @@
+{
+  "fixture_id": "firem2m-three-floor-demo-v1",
+  "synthetic": true,
+  "description": "Synthetic three-floor graph with two exits; distances are illustrative unitless routing costs, not building measurements.",
+  "origin_node": "F3_ROOM1",
+  "default_expected_exit": "EXIT_A",
+  "smoke_scenario": {
+    "location_node": "F2_A",
+    "synthetic_smoke_index": 90,
+    "threshold": 70,
+    "expected_exit": "EXIT_B"
+  },
+  "nodes": [
+    {
+      "id": "F3_ROOM1",
+      "floor": 3,
+      "kind": "room"
+    },
+    {
+      "id": "F3_C",
+      "floor": 3,
+      "kind": "corridor"
+    },
+    {
+      "id": "F3_A",
+      "floor": 3,
+      "kind": "stairwell"
+    },
+    {
+      "id": "F3_B",
+      "floor": 3,
+      "kind": "stairwell"
+    },
+    {
+      "id": "F2_A",
+      "floor": 2,
+      "kind": "stairwell"
+    },
+    {
+      "id": "F2_B",
+      "floor": 2,
+      "kind": "stairwell"
+    },
+    {
+      "id": "F1_A",
+      "floor": 1,
+      "kind": "stairwell"
+    },
+    {
+      "id": "F1_B",
+      "floor": 1,
+      "kind": "stairwell"
+    },
+    {
+      "id": "EXIT_A",
+      "floor": 0,
+      "kind": "exit"
+    },
+    {
+      "id": "EXIT_B",
+      "floor": 0,
+      "kind": "exit"
+    }
+  ],
+  "edges": [
+    {
+      "from": "F3_ROOM1",
+      "to": "F3_C",
+      "weight": 2,
+      "bidirectional": true
+    },
+    {
+      "from": "F3_C",
+      "to": "F3_A",
+      "weight": 3,
+      "bidirectional": true
+    },
+    {
+      "from": "F3_C",
+      "to": "F3_B",
+      "weight": 6,
+      "bidirectional": true
+    },
+    {
+      "from": "F3_A",
+      "to": "F2_A",
+      "weight": 3,
+      "bidirectional": true
+    },
+    {
+      "from": "F3_B",
+      "to": "F2_B",
+      "weight": 3,
+      "bidirectional": true
+    },
+    {
+      "from": "F2_A",
+      "to": "F1_A",
+      "weight": 3,
+      "bidirectional": true
+    },
+    {
+      "from": "F2_B",
+      "to": "F1_B",
+      "weight": 3,
+      "bidirectional": true
+    },
+    {
+      "from": "F1_A",
+      "to": "EXIT_A",
+      "weight": 2,
+      "bidirectional": true
+    },
+    {
+      "from": "F1_B",
+      "to": "EXIT_B",
+      "weight": 2,
+      "bidirectional": true
+    }
+  ],
+  "exits": [
+    "EXIT_A",
+    "EXIT_B"
+  ]
+}
