@@ -2,7 +2,9 @@
 
 ## 1. Outcome and limits
 
-FireRoute: Intelligent Fire Evacuation and Rescue Guidance System demonstrates actual oneM2M service-layer coordination and MEC interworking for a synthetic three-floor building with two stairwells. It collects temperature, smoke, and fire-related observations, computes deterministic risk/route decisions at the edge, controls three display endpoints, and presents separate resident/responder views.
+FireRoute: Intelligent Fire Evacuation and Rescue Guidance System demonstrates actual oneM2M service-layer coordination and MEC interworking. The user-selected scenario is the supplied fire_evac engine: floors 1–10 plus an eleventh-floor roof, 162 hazard zones and two stairwells. Preserve its seeded fire/smoke/collapse behavior as documented in SCENARIO.md. The existing three-floor graph/runtime is a verified regression checkpoint, not the selected final building.
+
+The target collects declared temperature/smoke/fire observations, computes risk/route decisions, controls three display endpoints and presents resident/responder views. The selected engine itself generates fire/smoke indices and collapse states only; temperature and occupant records need separately labeled sources. Evacuation movement/exit rules are additional application contracts, not existing engine behavior.
 
 This hackathon PoC does not guarantee fire detection accuracy, real occupant positions, or safe evacuation. Smoke index is synthetic and unitless 0–100. Remaining occupants are scenario records, not detected people. Physical sensor samples, if added, must retain their measured units and source provenance; measurement alone does not establish fire-detection accuracy.
 
@@ -42,12 +44,14 @@ Existing F01–F19 identifiers are retained for traceability.
 | F21 | MUST / P1 | Show synthetic remaining-occupant scenario information to responders | Timestamped synthetic count/zone records; resident access denied; unknown is not zero |
 | F22 | MUST target / P2 | Option C: MN-CSE as MEC App on MEC Host, with explicit Cloud IN-CSE registrar relation | Lifecycle/placement record, CSE registration evidence and acquired-guide conformance review |
 | F23 | MUST / P0–P4 | Independent local modules, PR integration and reproducible setup | Clean-clone setup and tests; shared deployment tied to a reviewed commit |
+| F24 | MUST / P1 | Integrate the user-selected fire_evac scenario unchanged, with seeded wind/time/collapse semantics and all 162 zones | Source/engine T22; actual atomic frame/CSE/SUB T23; agreed movement policy, route/Group/ACK/role views T24 |
+| F25 | MUST / P1 | Provide both fixed-origin guidance and seeded moving synthetic residents on the same hazard state, with explicitly assumed geometry/population | Analytic movement/queue/conservation tests T25; protected actual HTTP/CSE selected-profile views T26; no real-person or calibrated safety claim |
 
 If F22 cannot run, retain the selected-baseline gap and record a justified official fallback (first assess Option B). Never report Option B or a standalone CSE as Option C. A documented fallback is a scoped result, not completion of the original topology.
 
 ## 4. Non-functional requirements
 
-- Preserve fixtures/building_3f.json: deterministic topology, seedable scenarios, arbitrary routing costs. Add separate scenarios without silently changing fixture meaning.
+- Preserve fixtures/building_3f.json and its existing F03/F04 regression expectations. The selected source is separately versioned under simulator/scenarios/fire_evac/; do not silently alter either topology. F03/F04's EXIT_A/EXIT_B baseline checks remain regression requirements; F24 covers the selected building.
 - Use bounded request/retry budgets, TTL/ACK deadlines and visible failure states; configuration values are declared and included in run metadata.
 - Persist enough deduplication/outbox/version state for controlled recovery. CSE remains the owner of oneM2M resources.
 - Keep sensor/controller/device/IPE identities distinct. Apply backend permissions and CSE ACPs; privileged CSE credentials never enter browsers.
@@ -58,7 +62,9 @@ If F22 cannot run, retain the selected-baseline gap and record a justified offic
 
 ## 5. Selected success story
 
-Start with a computed baseline at EXIT_A. Publish a synthetic F2_A smoke event through the actual CSE. The subscription drives the edge risk controller, which persists the next route version to EXIT_B. Real group fan-out delivers to three display consumers; all three ACK CINs confirm application. Both role views update, with synthetic occupant information visible only to responders. A verified MEC service operation traverses the IPE/oneM2M path, and the deployment evidence states the actual option and Sandbox emulation. Demonstrate no-route and incomplete delivery without fabricated success.
+For the selected scenario, choose and record seed/wind/configuration, then publish current 162-zone frames through the actual CSE. The subscription drives the risk controller under an explicitly agreed movement/exit policy. Evolving fire/smoke and committed collapse trigger computed route updates; real Group/fopt and independent ACKs confirm device application. Both role views agree on incident/frame/version; separately generated occupant data stays responder-only. Verify MEC service/IPE interworking and report the actual deployment option. Do not predetermine an EXIT_A→EXIT_B transition on the ten-floor source without executing its new routing policy.
+
+The existing three-floor regression story remains: baseline EXIT_A, F2_A smoke → EXIT_B, both stair nodes blocked → NO_VERIFIED_ROUTE, with actual CIN/SUB/Group/ACK evidence. Its successful tests do not complete F24/T23/T24.
 
 ## 6. Out of scope and submission
 

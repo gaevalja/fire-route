@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {guidance,accepts} from '../../frontend/model.mjs';
+const base={incident_id:'inc-unit',route_version:2,guidance_status:'ROUTE_AVAILABLE',connections:{cse:'LIVE'},route:{target_exit:'EXIT_A',path:['ROOM','EXIT_A']},delivery:{state:'ALL_ACKED'}};
+test('current verified incident exposes its route',()=>{assert.deepEqual(guidance(base,'inc-unit').path,['ROOM','EXIT_A']);});
+test('stale, unknown, pending and no-route always remove directions',()=>{for(const status of ['STALE','UNKNOWN','PENDING','NO_VERIFIED_ROUTE']){const model=guidance({...base,guidance_status:status},'inc-unit');assert.equal(model.exit,null);assert.deepEqual(model.path,[]);}});
+test('unavailable CSE or different incident cannot reuse a route',()=>{assert.equal(guidance({...base,connections:{cse:'UNAVAILABLE'}},'inc-unit').exit,null);assert.equal(guidance(base,'another').exit,null);});
+test('prototype names and missing path never become guidance',()=>{assert.equal(guidance({...base,guidance_status:'__proto__'},'inc-unit').status,'UNKNOWN');assert.equal(guidance({...base,route:{target_exit:'EXIT_A',path:[]}},'inc-unit').status,'UNKNOWN');});
+test('older available route is rejected but a fail-closed state can clear it',()=>{assert.equal(accepts(base,{...base,route_version:1}),false);assert.equal(accepts(base,{...base,route_version:1,guidance_status:'STALE'}),true);});
+test('partial device delivery stays visibly incomplete',()=>{assert.equal(guidance({...base,delivery:{state:'INCOMPLETE'}},'inc-unit').incomplete,true);});

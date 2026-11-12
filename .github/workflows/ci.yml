@@ -21,6 +21,9 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: make test-unit
+      - run: node --version
+      - run: make test-frontend
+      - run: make test-scenario
       - run: python -m compileall -q backend onem2m simulator mec infra tests
 
   actual-cse:
@@ -34,6 +37,9 @@ jobs:
       - run: make p0-smoke
       - run: make p1-routes
       - run: make p1-group
+      - run: make p1-dashboard
+      - run: make p1-scenario
+      - run: make p1-scenario-dashboard
       - name: Save local development CSE evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -54,6 +60,17 @@ jobs:
             evidence/**/fanout.jsonl
             evidence/**/delivery.jsonl
             evidence/**/device.json
+            evidence/**/http.jsonl
+            evidence/**/*-view.json
+            evidence/**/app-runs.json
+            evidence/**/frames.jsonl
+            evidence/**/scenario-results.jsonl
+            evidence/**/last-model.json
+            evidence/**/navigation.json
+            evidence/**/replay-source.json
+            evidence/**/paused-historical-snapshot.json
+            evidence/**/before-reset-status.json
+            evidence/**/initial-status.json
             evidence/**/tests.txt
       - if: always()
         run: make down

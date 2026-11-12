@@ -1,0 +1,18 @@
+{
+  "bundle_sha256": "63ae8e4226d5865ff58a0b4cd5657fb06fbe71d16c2e7ad5a9e4208f0f622371",
+  "files_sha256": {
+    "README.md": "d002b99d7e738b37656e6da5002c297188bf17d98758f3ead174a36de167ee65",
+    "app.js": "6cc1f2020690503a98830044d9d336fa0913a0cd955e751ad42b6f499aa9f0bd",
+    "config.js": "f537ea27d2e3943a09715fbdd87c44a571c3888d0a7582efd773a091036c7870",
+    "engine.js": "fd46548ffb530e5730eb690d2eb9fc509df7f83049f5d2aa89414e4fb07ede34",
+    "index.html": "09b0d809e9a71fc06fd1945736da428ae0c125d1978a57a05e016d25d00629bb",
+    "styles.css": "de78ad61d14f1b1be793fea26d265050ab60a017f8f4e63c7810944278a5c443",
+    "test_engine.js": "158bced26f1138ea828b2e3455b958904a88a23257ee33526ecf83c022582981"
+  },
+  "imported_at_utc": "2026-11-12T06:35:28.586477+00:00",
+  "integration_status": "SOURCE_IMPORTED_NOT_CONNECTED_TO_CSE",
+  "license_provenance": "No license declaration was present in the supplied folder; publication attribution remains to be checked.",
+  "profile_id": "fire_evac_10f_v1",
+  "source": "User-selected local fire_evac folder",
+  "source_files_unmodified": true
+}

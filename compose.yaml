@@ -69,6 +69,110 @@ services:
     volumes:
       - ./evidence:/app/evidence
       - cse-metadata:/metadata:ro
+  scenario-core:
+    profiles: ["scenario"]
+    build: *core_build
+    entrypoint: ["python", "-m", "backend.scenario_core"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    depends_on:
+      cse:
+        condition: service_healthy
+    environment:
+      <<: *core_environment
+      NOTIFICATION_PUBLIC_URL: http://scenario-core:8000/onem2m/notify
+      SCENARIO_TRACE: /run/fire-route/scenario.jsonl
+    volumes:
+      - ./evidence:/app/evidence
+      - cse-metadata:/metadata:ro
+      - ./.runtime/fire-evac-trace.jsonl:/run/fire-route/scenario.jsonl:ro
+  scenario-app:
+    profiles: ["scenario-demo"]
+    build: *core_build
+    entrypoint: ["python", "-m", "backend.scenario_demo"]
+    stop_grace_period: 30s
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    depends_on:
+      cse:
+        condition: service_healthy
+    environment:
+      <<: *core_environment
+      NOTIFICATION_PUBLIC_URL: http://scenario-app:8000/onem2m/notify
+      SCENARIO_TRACE: /run/fire-route/scenario.jsonl
+      APP_AUTH_FILE: /run/fire-route/auth.json
+      APP_PUBLIC_ORIGIN: http://127.0.0.1:${SCENARIO_HOST_PORT:-3001}
+      APP_BIND_HOST: 0.0.0.0
+      APP_PORT: "3000"
+    ports:
+      - "127.0.0.1:${SCENARIO_HOST_PORT:-3001}:3000"
+    volumes:
+      - ./evidence:/app/evidence
+      - cse-metadata:/metadata:ro
+      - ./.runtime/auth.json:/run/fire-route/auth.json:ro
+      - ./.runtime/fire-evac-trace.jsonl:/run/fire-route/scenario.jsonl:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/healthz', timeout=2).close()"]
+      interval: 3s
+      timeout: 4s
+      retries: 30
+  scenario-check:
+    profiles: ["scenario-check"]
+    build: *core_build
+    entrypoint: ["python", "-m", "tests.integration.selected_dashboard_check"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    depends_on:
+      scenario-app:
+        condition: service_healthy
+    environment:
+      DASHBOARD_URL: http://scenario-app:3000
+      APP_PUBLIC_ORIGIN: http://127.0.0.1:${SCENARIO_HOST_PORT:-3001}
+      ACCESS_CODES_FILE: /run/fire-route/access-codes.json
+      EVIDENCE_ROOT: /app/evidence
+    volumes:
+      - ./evidence:/app/evidence
+      - ./.runtime/access-codes.json:/run/fire-route/access-codes.json:ro
+  app:
+    profiles: ["dashboard"]
+    build: *core_build
+    entrypoint: ["python", "-m", "backend.demo"]
+    stop_grace_period: 30s
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    depends_on:
+      cse:
+        condition: service_healthy
+    environment:
+      <<: *core_environment
+      NOTIFICATION_PUBLIC_URL: http://app:8000/onem2m/notify
+      APP_AUTH_FILE: /run/fire-route/auth.json
+      APP_PUBLIC_ORIGIN: http://127.0.0.1:${APP_HOST_PORT:-3000}
+      APP_BIND_HOST: 0.0.0.0
+      APP_PORT: "3000"
+    ports:
+      - "127.0.0.1:${APP_HOST_PORT:-3000}:3000"
+    volumes:
+      - ./evidence:/app/evidence
+      - cse-metadata:/metadata:ro
+      - ./.runtime/auth.json:/run/fire-route/auth.json:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/healthz', timeout=2).close()"]
+      interval: 3s
+      timeout: 4s
+      retries: 30
+  dashboard-check:
+    profiles: ["dashboard-check"]
+    build: *core_build
+    entrypoint: ["python", "-m", "tests.integration.dashboard_check"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      DASHBOARD_URL: http://app:3000
+      APP_PUBLIC_ORIGIN: http://127.0.0.1:${APP_HOST_PORT:-3000}
+      ACCESS_CODES_FILE: /run/fire-route/access-codes.json
+      EVIDENCE_ROOT: /app/evidence
+    volumes:
+      - ./evidence:/app/evidence
+      - ./.runtime/access-codes.json:/run/fire-route/access-codes.json:ro
 volumes:
   cse-data:
   cse-metadata:

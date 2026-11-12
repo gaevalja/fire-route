@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1424">
+  <title>화재 시나리오 메이커</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true"><span>✦</span></div>
+      <div class="brand-copy">
+        <div class="eyebrow">FIRE EVAC · SCENARIO LAB</div>
+        <h1>화재 시나리오 메이커</h1>
+        <p>초 단위로 건물의 화재, 연기, 붕괴를 살펴봅니다.</p>
+      </div>
+      <div class="header-status"><span class="pulse-dot"></span><span id="run-status">대기 중</span></div>
+    </header>
+
+    <main class="dashboard">
+      <aside class="sidebar card">
+        <div class="section-heading"><span class="section-kicker">01 / 설정</span><h2>시나리오 설정</h2></div>
+        <label class="field"><span>바람 세기</span><select id="wind-select"><option value="1">1 m/s · 약함</option><option value="5" selected>5 m/s · 보통</option><option value="10">10 m/s · 강함</option><option value="15">15 m/s · 매우 강함</option></select></label>
+        <label class="field"><span>무작위 시드</span><div class="seed-row"><input id="seed-input" type="number" min="1" max="2147483647" step="1" value="2026"><button id="random-seed" class="icon-button" type="button" title="새 시드 생성" aria-label="새 시드 생성">↻</button></div></label>
+        <label class="field"><span>재생 속도</span><select id="speed-select"><option value="100">느리게 · 10배속</option><option value="40" selected>보통 · 25배속</option><option value="10">빠르게 · 100배속</option></select></label>
+        <div class="control-grid"><button id="play-button" class="button button-primary" type="button"><span id="play-icon">▶</span><span id="play-label">재생</span></button><button id="step-button" class="button button-secondary" type="button">+ 1초</button></div>
+        <button id="reset-button" class="button button-quiet" type="button">처음부터 다시 생성</button>
+        <div class="divider"></div>
+        <div class="sidebar-note"><strong>계산 원칙</strong><p>분당 확산 속도를 유지하며 1초 간격으로 변화를 표시합니다. 날씨는 시나리오 내내 고정됩니다.</p></div>
+      </aside>
+
+      <section class="main-column">
+        <div class="metric-grid">
+          <div class="metric card"><span>경과 시간</span><div><strong id="metric-time">00:00</strong></div><p id="metric-origin">발화 지점 계산 중</p></div>
+          <div class="metric card"><span>발화 구역</span><div><strong id="metric-burning">0</strong><small>구역</small></div><p>불 수치가 0보다 큰 공간</p></div>
+          <div class="metric card"><span>붕괴 구역</span><div><strong id="metric-collapsed">0</strong><small>구역</small></div><p>이동과 점거가 불가능</p></div>
+          <div class="metric card"><span>전체 화재 진행</span><div><strong id="metric-progress">0</strong><small>%</small></div><div class="progress-track"><div id="progress-fill"></div></div></div>
+        </div>
+
+        <div class="visual-card card">
+          <div class="visual-header">
+            <div><span class="section-kicker">02 / 건물 현황</span><h2 id="floor-title">2층 평면도</h2><p id="floor-description">방 9개 · 복도 5구역 · 계단 A/B · 엘리베이터</p></div>
+            <div class="visual-actions"><div class="layer-switch" role="group" aria-label="표시 수치"><button class="active" type="button" data-layer="both" aria-pressed="true">종합</button><button type="button" data-layer="fire" aria-pressed="false">불</button><button type="button" data-layer="smoke" aria-pressed="false">연기</button></div></div>
+          </div>
+          <div class="floor-navigation"><button id="floor-down" class="floor-arrow" type="button" aria-label="아래층">‹</button><div id="floor-tabs" class="floor-tabs" role="group" aria-label="층 선택"></div><button id="floor-up" class="floor-arrow" type="button" aria-label="위층">›</button></div>
+          <div class="floorplan-scroll"><div id="floorplan" class="floorplan" aria-live="polite"></div></div>
+          <div class="plan-footer"><span><i class="legend-dot safe"></i>안전</span><span><i class="legend-dot smoke"></i>연기</span><span><i class="legend-dot fire"></i>화재</span><span><i class="legend-dot collapsed"></i>붕괴</span><span class="plan-hint">구역을 누르면 상세 수치를 볼 수 있습니다.</span></div>
+        </div>
+      </section>
+
+      <aside class="inspector-column">
+        <section class="inspector card"><div class="section-heading"><span class="section-kicker">03 / 구역 정보</span><h2>선택한 구역</h2></div><div id="zone-inspector" class="inspector-body"><div class="empty-state"><div class="empty-icon">⌖</div><strong>구역을 선택하세요</strong><p>평면도의 방, 복도, 계단을 누르면 현재 상태가 표시됩니다.</p></div></div></section>
+        <section class="events card"><div class="section-heading"><span class="section-kicker">04 / 변화 기록</span><h2>최근 이벤트</h2></div><div id="event-list" class="event-list" aria-live="polite"></div></section>
+      </aside>
+    </main>
+    <footer class="footer">불·연기 수치는 0~100의 상대 위험도 지표입니다.</footer>
+  </div>
+  <script src="config.js"></script>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -27,6 +27,8 @@ The two mec/ responsibilities require separate subdirectories/owners (risk/ vs i
 
 ARCHITECTURE.md is the current contract source. P0 creates executable schemas and interface definitions; changes to those contracts need review by producer and consumer owners. Agree schema_version, event/command correlation, status/error states and role visibility before parallel implementation. Do not silently change payload fields in one module.
 
+The selected scenario's rules/source manifest and frame/movement boundaries are in SCENARIO.md. Keep simulator/scenarios/fire_evac/'s seven imported files unchanged; wrappers/adapters belong outside that snapshot. An intentional user-approved model update needs recorded hashes and source regression execution. Simulator owns current-frame production; backend/oneM2M owns typed CSE acceptance; risk owns the separately agreed traversal policy; UI consumes backend/CSE state rather than running an independent authoritative scenario.
+
 PR content must state the concrete problem/result, owned scope, contract/config changes, dependency reason/version, executed test commands/results, real-versus-simulated evidence, remaining gaps and rollback/recovery impact. A missing environment is an explicit NOT_RUN/BLOCKED check, not a green integration badge. Unit mocks are labeled.
 
 Run fast deterministic unit/contract checks on PRs. Real CSE tests use disposable isolated resource namespaces; real MEC tests run in the permitted integration environment with secret injection, not from untrusted PR code. Required checks and secrets boundaries must be configured in the real repository before claiming CI coverage.

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from contextlib import contextmanager
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -35,8 +36,14 @@ class NotificationStore:
                     UNIQUE(subscription_ref,event_id), UNIQUE(subscription_ref,cin_ri));
             """)
 
+    @contextmanager
     def connect(self):
-        return sqlite3.connect(self.path, timeout=5)
+        db=sqlite3.connect(self.path,timeout=5)
+        try:
+            with db:
+                yield db
+        finally:
+            db.close()
 
     def verification(self, ref: str, request_id: str) -> None:
         with self.connect() as db:

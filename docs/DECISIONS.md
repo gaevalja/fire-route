@@ -1,6 +1,6 @@
 # FireRoute architecture decisions and open questions
 
-Updated: 2026-11-11. DECIDED means a project choice is accepted; it does not mean implemented or verified. SOURCES.md records source/edition limits; STATUS.md records execution status.
+Updated: 2026-11-12. DECIDED means a project choice is accepted; it does not mean implemented or verified. Earlier ADRs retain the proposal/status at their decision time; later ADRs and STATUS.md record current implementation and execution. SOURCES.md records source/edition limits.
 
 ## ADR-001 — Identity and safe directory change (DECIDED / directory verified)
 
@@ -39,7 +39,7 @@ Original rubric now inspected: 17 Expert cells and relevant prerequisite tiers. 
 | Topic | Working proposal | What must be verified / responsible lane |
 |---|---|---|
 | CSE | Configurable adapter; ACME candidate supporting MN-CSE | Installed version/plugins/release, real SUB/fopt/ACP/MQTT and registrar behavior / oneM2M |
-| Runtime | Python 3.12, FastAPI/pytest; Vue 3/TypeScript/Vite | Runtime download/package access, compatibility and actual lockfiles / infra + owners |
+| Runtime | Python 3.12; standard-library API/unittest and buildless HTML/CSS/JS (ADR-013) | Actual target-runtime CI, browser QA and immutable dependency/image lock / infra + owners |
 | CSE execution | Compose where supported, process alternative | Docker socket/network/port capabilities; host Python currently 3.10 / infra |
 | GitHub | gaevalja/fire-route; main and feature/* | Membership, branch protection, actual CI runs and deploy permissions / integration owner |
 | Cloud IN-CSE | Separate registrar role | Actual host/owner/credentials/POAs; label same-host simulation / oneM2M + infra |
@@ -105,3 +105,51 @@ The actual make p1-group gate passed in evidence/20261111-115340Z-34c169f6/: thr
 The first actual P1_GROUP attempt, evidence/20261111-114816Z-fbc3f740/, received HTTP 201 / RSC 2001 and an actual three-member GRP. The request used SP-relative /<cse-id>/<CNT-ri> members; the observed ACME 2026.5.1 response stored the same local members as bare CNT resource IDs. Generic ensure correctly refused the unequal strings, so the first run stopped before fan-out/device application.
 
 Use the actual local command CNT IDs directly in this local Group. Keep exact ensure/read-back comparisons and require three distinct IDs; do not ignore mid, overwrite unknown resources or strip arbitrary remote prefixes. Remote Group membership is outside this local slice. Four regressions exercise canonical CREATE/reuse, changed-member rejection, duplicate-ID rejection and bad member-count rejection. The subsequent actual Group/ACK rerun passed. Owner: oneM2M/backend. This fixes address representation without relaxing membership identity or changing the CSE implementation.
+
+## ADR-013 — Local role dashboards on the verified CSE loop (DECIDED / HTTP-CSE slice verified)
+
+Date: 2026-11-12. Owner: backend/frontend/QA lanes. After the user pushed 80f6e87 on feature/p0-cse-foundation, continue on feature/p1-role-dashboards based on that verified commit. This is a stacked development branch because main still contains the documentation baseline; do not silently merge main or discard the verified foundation. Integrate the foundation first, then review/rebase the dashboard branch through the team PR workflow.
+
+Use Python's existing standard library HTTP server, unittest and buildless HTML/CSS/ES modules for this bounded local PoC. FastAPI/Vue were initial proposals; adding those dependencies would not improve the required real-CSE path at this stage. Keep pure view/state functions and explicit role/API contracts (ROLE_API.md) so a later framework migration remains possible. Node is a frontend-test tool only. No application runtime dependency was added. This server choice is for isolated local demonstration, not a claim of hardened public hosting.
+
+Generate separate high-entropy role codes into ignored mode-0600 files; load only hashes in the app and use expiring HttpOnly/SameSite=Strict sessions, same-origin writes and bounded login attempts. Keep CSE identities server-side. Extend actual CSE resources via opt-in public status, private diagnostics and occupancy policies; preserve earlier smoke defaults. Whitelist API fields, correlate incident/event/version, return PENDING during updates and remove directions for stale/missing/CSE-error states. Synthetic occupants keep null as UNKNOWN and expire independently. Old APPLIED device observations become STALE. Device ACK producers and CSE storage remain independent of the API.
+
+The long-running simulator writes actual telemetry CINs, consumes real SUBs, computes/persists decisions and controls actual Group members/ACKs. Heartbeats are scheduled after each completed action so missing-ACK waits leave a visible INCOMPLETE state. Reset creates a new owned namespace/incident and retains CSE data. Notification SQLite connections now close deterministically for the long-running process; existing durability/concurrency regressions remain green. Restart/dispatch recovery is still a separate unverified requirement.
+
+Actual P1_DASHBOARD passed 17 checks, including role/session denial, CSE occupant ACP denial, A/B/no-route, missing ACK, expiry and reset. The latest rerun includes ACK-age behavior and per-stage role responses; exact runs/audits are indexed in STATUS. Browser rendering/accessibility, actual TLS/CSE authentication, CI and MEC remain unverified. Existing profile/security limitations remain explicit. No Sites hosting, shared deployment, PR, main merge or new-branch push was performed.
+
+## ADR-014 — Adopt the user's fire_evac scenario without changing its model (DECIDED / source tests verified)
+
+Date: 2026-11-12. User direction: use the scenario in C:\Users\lilkid\Downloads\fire_evac. Owner: simulator/backend/UI lanes. This supersedes the three-floor building as the final scenario target while preserving its verified fixture, code and CSE runs as regressions. No previous PASS is reattributed to the new 162-zone scenario.
+
+Preserve all seven supplied files byte-for-byte under simulator/scenarios/fire_evac/ and record source hashes in manifest.json. Keep the external originals unchanged and remove any requirement that other developers have that Windows Downloads path. The original Node tests are exposed through make test-scenario and CI source configuration; no new application runtime or simulator container is introduced in this import. Source provenance/attribution remains visible because no license declaration was supplied.
+
+The source owns fire/smoke transport, seeded randomness, wind, interpolation, collapse and termination; SCENARIO.md records those exact rules. FireRoute owns a future typed current-frame/CSE publisher, deduplication/clock contract, evacuation traversal policy, Group/ACK and protected role views. Human movement, entrance edges/costs, fire/smoke traversal thresholds and occupant behavior are absent from the source. They remain unresolved rather than being guessed from spread links or legacy node IDs. Private precomputed next-minute state must not be published as current telemetry; accelerated simulation time is separate from real communication/TTL clocks.
+
+Rejected shortcuts: replacing the source with the existing three-floor smoke-button demo; copying the scenario UI over the real-CSE dashboard and claiming integration; interpreting fire index as temperature; adding arbitrary people/RL rules; or treating source-engine tests as selected-profile E2E. Keep the existing app working while adding a separately tested profile. T22 source/engine checks pass; T23 actual frame/CSE and T24 integrated routing/Group/UI remain NOT_STARTED/NOT_RUN. No push, PR, deployment or change to the supplied engine/configuration was performed.
+
+## ADR-015 — Both modes with an explicitly assumed pedestrian network (DECIDED / unit-offline verified)
+
+Date: 2026-11-12. The user requested both fixed-origin guidance and moving synthetic residents with realism, then explicitly delegated dimensions/population choices (no measured inputs available). This authorizes a new declared evacuation layer while preserving ADR-014's original fire engine. Owner: risk/simulator/backend/UI. EVACUATION_MODEL.md and fixtures/evacuation_assumptions.json define the contract and uncalibrated defaults.
+
+Reuse one source state/clock and one model for both views. Fixed queries do not move residents. Moving residents use seeded departure/speed variability, edge travel time, shared finite capacities, fair queues and replanning at nodes. Collapse/hazard blockage cannot erase a person or imply a casualty; in-transit blocked occupants remain counted. External exits, distances, capacities, slowdown and blocking indices are project assumptions. NIST S12/S13 inform model components/tests, not numeric calibration or compliance. Geometry and source hashes are evidence; no real building plan or actual person location is inferred.
+
+Node 24.22.1 is the observed host tool pin (.node-version) for a built-in-module headless wrapper. No new third-party application dependency or Node installation in the Python container is needed. The wrapper verifies the source snapshot, exports bounded current states with a trace digest, and strips private future state. Python validates/replays each frame; actual CSE ingestion/subscriptions precede model updates. Source manifests now include .cjs, JSON fixtures and the Node version file. Wheel metadata includes source/assumption/dashboard data; package installation and immutable image/transitive locks remain unverified.
+
+Separate local profiles preserve the verified legacy app: p1-scenario is the selected actual CSE/core gate; p1-scenario-dashboard is its HTTP/role/expiry gate; demo-scenario-up serves the new fixed/moving UI on 127.0.0.1:3001. Moving/private counts remain responder-only, and the common three-sign Group illustrates the configured fixed guidance query. This does not claim actuator placement/orientation per resident. Missing/stale/mismatched CSE state clears directions and positions. Model units/offline replay pass; actual selected CSE/HTTP execution, browser rendering, full restart recovery and MEC remain separate unverified gates.
+
+## ADR-016 — Inspect paused resident records without extending live guidance (DECIDED / HTTP-CSE slice verified)
+
+Date: 2026-11-12. User reported no resident options and UNKNOWN in moving mode after pausing. Live observation expiry correctly removed private current fields, but the UI discarded the selection list and rebuilt it on every poll. Preserve stable same-incident selections and use an explicitly historical record when live data is unavailable. Logout, role change and incident reset clear private cached records.
+
+The selected responder-only snapshot endpoint reads the latest committed public status, then that version's named immutable route/moving/occupancy/frame CINs through the actual responder CSE client. Validate incident/event/version/time/policy and population conservation before returning the original recorded time and explicit HISTORICAL/is_live=false/route=null fields. Reads do not advance simulation or renew observation timestamps. Show recorded people/counts/positions with their time while live directional guidance remains expired. The legacy endpoint set stays unchanged. No local invented population or weakened TTL is used as a fallback.
+
+164 Python and 15 frontend-state tests pass locally. The extended actual HTTP gate and native browser dropdown checks remain NOT_RUN; previous baseline HTTP evidence does not verify this endpoint. No dependency or deployment is added. Owner: backend/frontend/QA; see STATUS.md for command output and next verification.
+
+## ADR-017 — Give selected HTTP checks an explicit initial state (DECIDED / actual rerun verified)
+
+Date: 2026-11-12. User run evidence/20261112-105931Z-f68c1310/ failed initial_both_modes_available. Both original HTTP snapshots show CSE=LIVE, simulation_second=30, version=31, STALE and three observed ACKs. Compose reported the existing app Running; the gate assumed a fresh second-zero instance. The failure occurred before the historical endpoint assertions, so it neither verifies nor disproves that endpoint.
+
+Initialize the selected HTTP gate by authenticated reset, require a different paused READY incident, and retain pre/post status and partial assertions. Retry only an explicit busy rejection (409), never an accepted or ambiguous POST. Force container recreation for the selected gate and demo start so the regenerated trace (written by atomic rename) gets a fresh bind mount even when source/configuration is unchanged. These commands intentionally restart the selected local demo; CSE volumes and old evidence are retained. Keep real CSE assertions unchanged. No engine/model/TTL change or new dependency is needed. Owner: backend/QA/infra. Actual CSE rerun and browser QA remain separate gates.
+
+Verification update for ADR-016/017: user run evidence/20261112-121211Z-6e06237b/ passed all 18 HTTP/CSE assertions. New paused incident, live expiry, resident snapshot denial and responder historical people retrieval are verified for this slice. Separate read-only audit evidence/20261112-124857Z-678e9961/ passed 23 checks including actual named-CIN responses and source hashes. Earlier pending statements above describe the pre-rerun checkpoint; native browser dropdown QA, broader fault cases and CSE shutdown diagnosis remain open.

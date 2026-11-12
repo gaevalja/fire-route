@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FireRoute · 통합 대피 시뮬레이션</title><link rel="stylesheet" href="/styles.css"><script type="module" src="/app.js"></script></head>
+<body>
+<header><b>FireRoute <span>SCENARIO LAB</span></b><span class="badge">10층 + 옥상 · 합성 162구역 · MEC 미연결</span></header>
+<main>
+<section id="login" class="card narrow"><h1>대피 시뮬레이션 접속</h1><p>같은 화재 상태에서 고정 위치 안내와 가상 주민 이동을 확인합니다.</p><form id="login-form"><label for="role">역할</label><select id="role"><option value="resident">주민</option><option value="responder">구조대</option></select><label for="code">접속 코드</label><input id="code" type="password" required autocomplete="current-password"><button>접속</button></form><p id="error" role="alert"></p></section>
+<div id="app" hidden>
+<section class="heading"><div><p class="eyebrow">SYNTHETIC EVACUATION · ASSUMED GEOMETRY</p><h1>화재 · 대피 통합 상황판</h1><p>실측 도면·실제 인원·안전한 대피를 예측하거나 보장하지 않습니다.</p></div><button id="logout">로그아웃</button></section>
+<section class="metrics"><article class="card"><small>모의 시간</small><strong id="clock">—</strong></article><article class="card"><small>안내 상태</small><strong id="guidance">대기</strong></article><article class="card"><small>고정 출발점의 계산 출구</small><strong id="exit">—</strong></article><article class="card"><small>선택한 안내의 장치 ACK</small><strong id="acks">— / 3</strong></article></section>
+<p id="notice" class="notice" role="status">실제 CSE 기록을 확인하고 있습니다.</p>
+<p id="snapshot-note" class="snapshot-note" role="status" hidden></p>
+<section id="controls" class="card" hidden><div class="buttons"><button data-action="step">+1초</button><button data-action="advance_30">+30초</button><button data-action="resume">자동 진행</button><button data-action="pause">일시정지</button><button data-action="stop_display_c">장치 C 중지</button><button data-action="reset">초기화</button></div><p id="runtime">처리 상태 확인 중</p><p>원본 엔진의 시간을 진행합니다. 통신·ACK 완료를 기다리므로 화면 배속은 달라질 수 있습니다. 일시정지 후 30초가 지나면 안내가 만료됩니다.</p></section>
+<section class="grid"><article class="card"><div class="toolbar"><div><h2>층별 모식도</h2><p>길이·수용 인원은 측정되지 않은 가정값입니다.</p></div><label>층 <select id="floor"></select></label><label>보기 <select id="mode"><option value="fixed">고정 위치 안내</option><option id="moving-option" value="moving" hidden>가상 주민 이동</option></select></label></div><svg id="map" viewBox="0 0 840 440" role="img" aria-label="선택한 층의 합성 구역과 대피 상태"></svg><p class="legend">초록: 계산 경로 · 주황: 모의 위험 · 빨강: 차단 · 파랑 점: 선택한 가상 주민</p></article>
+<article class="card"><h2 id="detail-title">고정 위치의 최신 안내</h2><div id="fixed-detail"></div><div id="moving-detail" hidden><label for="person">가상 주민 선택</label><select id="person" disabled><option>주민 기록을 확인하고 있습니다</option></select><p id="person-state"></p><p>점은 구역·구역 사이의 모의 진행 상태입니다. 저장 기록을 표시할 때는 저장 당시 위치이며, 실제 위치 측정이 아닙니다.</p></div><ol id="path"></ol><p>3개 가상 안내 장치는 고정 출발점의 공통 안내를 확인합니다. 모든 주민의 개별 경로를 표시하는 장치라는 뜻은 아닙니다.</p></article></section>
+<section id="private" hidden><h2>구조대 전용 · 합성 인원</h2><section class="metrics"><article class="card"><small>초기 인원</small><strong id="total">—</strong></article><article class="card"><small>출구 도착</small><strong id="evacuated">—</strong></article><article class="card"><small>잔류</small><strong id="remaining">—</strong></article><article class="card"><small>통로 대기</small><strong id="queued">—</strong></article></section><article class="card"><h2>구역별 잔류 정보</h2><p>마지막 도착 구역 기준이며, 이동 중 인원은 별도로 표시합니다. 저장 기록 보기에서는 표시된 저장 시각의 인원입니다. 기록을 읽지 못하면 UNKNOWN입니다.</p><div id="occupants"></div></article></section>
+</div>
+<footer>원본 화재 모델 유지 · 실제 oneM2M 통신 · 가정된 보행·정체 모델 · 실제 안전 평가용 아님</footer>
+</main></body></html>

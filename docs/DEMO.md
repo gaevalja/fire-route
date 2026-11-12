@@ -4,17 +4,19 @@
 
 This is a proposed storyboard, not an executed or recorded demo. Initial target length is 4–6 minutes, a team proposal until official duration/format rules are obtained. All evidence must come from an actual run; pre-recorded backup is labeled with its run ID/time.
 
+The selected final scenario is now the supplied fire_evac engine (floors 1–10 plus roof/162 zones), not the legacy three-floor regression. Its source tests pass; CSE/route/UI integration is not yet implemented. SCENARIO.md and T23/T24 govern the new live story. Do not present the original standalone preview as an actual oneM2M/MEC demonstration.
+
 Display input provenance (SYNTHETIC/PHYSICAL), actual CSE connection/test status, MEC deployment option/source, Sandbox network emulation and missing integrations. Describe computed alternatives on the synthetic graph without promising actual evacuation safety, fire accuracy or real occupant positioning.
 
 ## 2. Storyboard
 
 | Approximate time | Show | Required supporting evidence |
 |---|---|---|
-| 0:00–0:30 | FireRoute problem, synthetic three-floor building, separate resident/responder roles | Scope/provenance labels; overview figure |
+| 0:00–0:30 | FireRoute problem, selected synthetic ten-floor building plus roof, separate resident/responder roles | Source manifest, seed/wind, scope/provenance labels; overview figure |
 | 0:30–1:10 | Actual AE/CNT/CIN/SUB/GRP/ACP tree and Option C target vs actual placement | CSE read-back, versions/IDs; real deployment facts only |
-| 1:10–1:40 | Algorithm computes EXIT_A from F3_ROOM1; two live views agree | Route CIN/version; no prerecorded route substitution |
-| 1:40–2:30 | Publish synthetic smoke index 90 at F2_A and typed temperature sample | Real CSE CIN and SUB callback referencing the source event |
-| 2:30–3:10 | Risk policy excludes F2_A and computes EXIT_B | New version/path/CSE record; threshold labeled demo policy |
+| 1:10–1:40 | Compute a route for the agreed resident start/exit policy; two live views agree | Actual frame/route CIN/version; policy recorded; not implemented yet |
+| 1:40–2:30 | Seeded fire/smoke evolution from the preserved engine, fixed wind and simulated/real time shown | Actual 162-zone CSE CIN and SUB callback; no independent browser state substitution |
+| 2:30–3:10 | Policy-blocked/collapsed traversal triggers route recomputation or no-route | Source frame, committed collapse state, agreed movement policy and actual new route CIN |
 | 3:10–4:00 | Real GRP/fopt delivers to three independent displays and each ACKs | Aggregate member results, three command CINs, three device ACK CINs |
 | 4:00–4:40 | Actual MEC service → IPE → CSE → application; app placement and Cloud IN-CSE registration | T11/T16/T17 evidence; direct API call and emulated network shown separately |
 | 4:40–5:30 | No-route clears directions; stop one display; deny unauthorized access; responder synthetic occupants | Actual incomplete/STALE/UNKNOWN status, CSE denial, responder-only timestamped data |
@@ -37,4 +39,18 @@ The [organizer publication notice](https://estimed.etsi.org/news/estimed_hackath
 
 Nov 19: run clean-environment reproduction, verify every link, rehearse live and backup paths, redact secrets, and compare all claims with STATUS. Nov 20: finish all deliverables and submit before the confirmed cutoff. Nov 23–25 interviews/presentations: every presenter explains resource tree, integration methodology, protocol choices, why oneM2M is useful, real vs emulated MEC, failure handling, measured clock boundaries and remaining limitations. Nov 26 selection and Nov 27 ceremony do not extend implementation time.
 
-No public posting, upload, video recording, Git push or presentation delivery is performed in this documentation task.
+The original documentation task performed no publication. Later implementation and the user's foundation-branch push are recorded in STATUS; no video, article, presentation or shared deployment is completed by this storyboard.
+
+## 5. Current local rehearsal path — legacy three-floor checkpoint
+
+The HTTP/CSE gate make p1-dashboard passed; it stops its stack on completion. For manual browser rehearsal, run make demo-up and open http://127.0.0.1:3000. Read role codes privately from ignored .runtime/access-codes.json. Use separate browser profiles for simultaneous roles; keep codes out of captures. Start with the resident approved route and the responder synthetic sensors/occupants, then trigger F2_A fire (EXIT_B), F2_B fire (NO_VERIFIED_ROUTE), stop display-c (2/3 ACKs/INCOMPLETE), pause and wait beyond 30 seconds (STALE/UNKNOWN), then reset to a new incident (EXIT_A).
+
+The schematic is a synthetic topology, occupants are generated counts and displays are separate local Python processes. The local API uses real CSE snapshots and role policies; it does not call a MEC service. The first scripted HTTP/CSE gate is verified, while browser layout/accessibility and actual recording remain NOT_RUN. Follow TEST_PLAN.md before presenting the UI as browser-verified. Show the actual standalone IN-CSE label and missing MEC integration until P2 evidence exists.
+
+For the selected source preview, open simulator/scenarios/fire_evac/index.html and use its original seed/wind/floor/playback controls. This preview is isolated local simulation. Replace the legacy rehearsal with the selected live CSE profile only after T23/T24 pass; keep the existing run as a labeled regression/backup, not migration proof.
+
+## 6. Prepared selected dual-mode rehearsal
+
+After make p1-scenario and make p1-scenario-dashboard pass, run make demo-scenario-up and use http://127.0.0.1:3001. A responder sees fixed F7-R3 guidance and a separate moving-resident view over the same fire frame. Show floor/individual selection, +1/+30 seconds, queues, last-reached-node counts, conserved population and actual fixed-sign ACKs. Pause beyond 30 wall seconds to hide directions/positions. A resident must not receive the private people/occupancy payload. Do not expose login codes in captures.
+
+Explicitly label the default 170 people, assumed distances/capacities/speeds and heuristic hazard policy as uncalibrated. Offline seed=2026/wind=5 results describe this simulation only; they are not measured evacuation success or latency. New browser recording/manual QA remains NOT_RUN until performed. The original engine/configuration, selected CSE communication, assumed pedestrian model and missing MEC integration are four distinct claims.

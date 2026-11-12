@@ -119,7 +119,7 @@ class DeliverySession:
             return
         raise ProtocolError('Display worker reported ' + message['kind'])
 
-    def dispatch(self, route, *, expect_missing=None):
+    def dispatch(self, route, *, expect_missing=None, allow_incomplete=False):
         now = datetime.now(timezone.utc)
         command = DisplayCommand.parse({'schema_version':1,'command_id':'cmd-'+uuid4().hex,
             'incident_id':route['incident_id'],'event_id':route['event_id'],'route_version':route['route_version'],
@@ -143,7 +143,7 @@ class DeliverySession:
                 break
             time.sleep(0.05)
         missing = {role for role in ROLES if self.configs[role]['ae_id'] in tracker.missing}
-        if missing != ({expect_missing} if expect_missing else set()):
+        if not allow_incomplete and missing != ({expect_missing} if expect_missing else set()):
             raise ProtocolError('ACK completion differs from the expected scenario')
         readbacks, states = {}, {}
         for role,row in observed.items():

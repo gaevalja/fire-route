@@ -4,7 +4,37 @@
 
 A simulation-based PoC for the 2026 oneM2M × ETSI MEC international hackathon. GitHub repository and checkout directory: **fire-route**. Repository: [gaevalja/fire-route](https://github.com/gaevalja/fire-route).
 
-> Current state: actual T05, P1_ROUTES and P1_GROUP passed on ACME 2026.5.1 / Python 3.12.16. The verified backend loop covers notifications → computed route CINs → Group/fopt → three simulated display processes and ACKs. Normal A/B/no-route delivery and a deliberately stopped device were checked, including six actual ACP denials. Dashboards and MEC integration remain unimplemented. Post-test CSE shutdown and shared-profile security remain open. See [STATUS](docs/STATUS.md).
+> Current state: actual T05, P1_ROUTES, P1_GROUP and P1_DASHBOARD passed on ACME 2026.5.1 / Python 3.12.16. The local loop includes authenticated role APIs, synthetic occupants, CSE notifications → computed routes → Group/fopt → independent simulated display ACKs. Browser rendering has not been checked. MEC, full recovery, authenticated CSE transport and shutdown diagnosis remain open. See [STATUS](docs/STATUS.md) for the exact tested revision and subsequent changes.
+
+> Scenario update (2026-11-12): the user selected **fire_evac: floors 1–10 plus roof, 162 zones**, then requested both fixed guidance and moving residents. Original source is unchanged. A new assumed-geometry model, CSE/core runner and separate ten-floor role dashboard are implemented; selected core/HTTP baseline gates have passed while full hazard/fault and browser verification remain open. Earlier PASS evidence above belongs to the three-floor regression. See [scenario](docs/SCENARIO.md) and [evacuation model](docs/EVACUATION_MODEL.md).
+
+> Execution update: the selected core and HTTP baseline gates have now passed in the user's actual CSE environment. A manual run through simulated second 208 was separately audited; full selected hazard/fault coverage, comprehensive browser QA and MEC remain open. [STATUS](docs/STATUS.md) records the exact run IDs and scope.
+
+Run `make test-scenario` to execute the original engine tests. Opening `simulator/scenarios/fire_evac/index.html` runs its standalone scenario maker, with no CSE/MEC integration. Fire/smoke/collapse rules stay as supplied; the added movement/entrance assumptions are defined separately in EVACUATION_MODEL.md.
+
+## Selected scenario: two modes
+
+~~~bash
+# Original source -> bounded trace -> offline fixed and moving model (no CSE).
+make scenario-preview
+
+# Actual CSE/frame/SUB/fixed decision/moving records/Group/ACK gate.
+make p1-scenario
+
+# Actual authenticated HTTP/CSE gate for the ten-floor dashboard.
+make p1-scenario-dashboard
+
+# Persistent ten-floor dashboard; open http://127.0.0.1:3001.
+make demo-scenario-up
+~~~
+
+Node 24.22.1 is the observed/tested host tool version, recorded in .node-version; it exports source traces using built-in modules. Python containers need no Node/npm package. Default seed=2026/wind=5, core replay length=180 seconds; live export defaults to 1800 seconds. Override SCENARIO_SEED, SCENARIO_WIND or SCENARIO_SECONDS explicitly before generation. Run integration profiles one at a time; make down preserves evidence/CSE volumes.
+
+The selected HTTP gate recreates its containers and explicitly resets to a new paused incident before checking simulated second zero. It records before-reset-status.json, initial-status.json and assertions even on failure. This stops a previously used/expired demo from becoming the test baseline. make demo-scenario-up also recreates its containers so the atomically replaced trace file is mounted afresh; expect a new incident, not continuation of an earlier run. Existing CSE volumes and evidence remain. These commands interrupt the selected local demo; run them serially.
+
+Log in using the role code from ignored .runtime/access-codes.json. Responder can switch **고정 위치 안내 / 가상 주민 이동**, choose floors and a synthetic resident, and advance/pause/reset. Resident sees approved fixed-origin guidance only. Defaults are **F7-R3, 170 synthetic residents**, with speed/departure variability and finite link capacity. All lengths/capacities/thresholds are assumptions in fixtures/evacuation_assumptions.json, not measured geometry or validated evacuation predictions. The source fire engine is unchanged. Paused/expired observations remove directions and individual positions. The selected core/HTTP baseline gates have passed in the user environment; full hazard/fault coverage and browser QA remain separate.
+
+Paused resident selection: live guidance still expires after 30 seconds, but the responder can inspect the latest saved people snapshot with an explicit **저장 기록 보기** timestamp. Its blue points/counts are recorded values, not current positions. Current-version matching CSE CINs are read without advancing time; unchanged option lists survive polling/PENDING. The new snapshot endpoint is responder-only. Apply source updates with make demo-scenario-up, then refresh/login; this restarts the app into a new incident while retaining earlier CSE/evidence records. The extended actual HTTP/CSE gate passed 18 checks on 2026-11-12, including protected historical retrieval after live expiry. Browser resident selection across polls/pause/reload still needs manual checking; see STATUS.md for exact evidence.
 
 ## Run the P0 foundation
 
@@ -43,9 +73,32 @@ These profiles use HTTP and header-based identities on an isolated local network
 
 Python's standard unittest runner is used in P0; pytest can run these tests later but is not a required installed dependency. Host Python 3.10 is used only for portable offline unit checks here, not as the supported product environment. The agent sandbox denies sockets/Docker access; successful unit checks do not imply T05 PASS.
 
-CI is configured for Python 3.11/3.12 unit checks and an actual local ACME smoke job. This workflow is source configuration until it is run on GitHub; no CI badge/pass is claimed.
+CI is configured for Python 3.11/3.12 units, Node frontend-state tests and actual local ACME gates. This workflow is source configuration until it is run on GitHub; no CI badge/pass is claimed.
 
-## Demonstration goal
+## Run the local dashboard
+
+~~~bash
+# Offline frontend state checks; Node is needed only for this test command.
+make test-frontend
+
+# Actual HTTP sessions/role filtering + actual CSE scenarios; stops after the gate.
+make p1-dashboard
+
+# Keep the real CSE and dashboard running for manual browser verification.
+make demo-up
+~~~
+
+Open **http://127.0.0.1:3000**. The dashboard is served directly by Python; no npm install or frontend build is needed. Open the ignored `.runtime/access-codes.json` privately in your editor and use the code for the selected role. Separate generated resident/responder codes are never printed by the setup command. Keep that file private; do not paste codes into issues, logs or screenshots. Login creates an expiring HttpOnly role-bound session. Two roles can be checked in separate browser profiles/private windows because a browser profile shares its session cookie.
+
+The resident view reads approved route/status only. The responder view adds synthetic sensors, hazards, three display ACK states and synthetic occupants (2 or UNKNOWN, never inferred real people). Responder controls generate actual CSE events for fire at F2_A/F2_B, stopping display-c, pausing/resuming input and resetting to a new simulation. Reset creates a new incident/owned namespace and retains CSE data. Five-second synthetic temperature observations retain earlier hazard blocks; pause lets guidance/occupants expire after the configured 30-second TTL. Missing CSE data clears directions instead of serving cached routes as fresh.
+
+The 2026-11-12 actual gate passed 17 checks, including EXIT_A → EXIT_B → no-route, missing ACK, backend role denial, actual CSE resident occupant denial, stale guidance/counts and a new-incident reset. The latest rerun also records each role response and confirms expired ACK labels. This verifies HTTP/CSE behavior; browser layout, accessibility and browser interaction still need manual verification. See [role API](docs/ROLE_API.md) and [verification record](docs/STATUS.md).
+
+Only 127.0.0.1:3000 is published; the accepted origin uses that exact hostname/port. Set APP_HOST_PORT for a different local port. `.runtime/auth.json` contains hashes and is the only auth file mounted into the app; private plaintext access codes are mounted only into the test runner. `make demo-logs` shows bounded application logs; `make down` stops all profiles while preserving data. This is a local HTTP PoC; CSE header identities/default secret and missing TLS prevent claiming production or shared-server security. The next start creates a new simulation rather than resuming an old incident automatically.
+
+## Verified regression demonstration
+
+The following describes the existing three-floor checkpoint. The selected final scenario and its remaining integration work are defined in SCENARIO.md.
 
 Synthetic temperature/smoke/fire-related sensor observations enter an actual oneM2M CSE. An edge risk application computes a route through a synthetic three-floor graph. Blocking F2_A changes the selected exit from A to B. The controller stores the versioned decision and creates one display command through a real GRP/fopt targeting three command containers. Three independent display consumers apply it and create separate ACKs. Resident and responder applications agree on the incident/version; responder-only diagnostics include synthetic remaining-occupant information.
 
@@ -63,19 +116,19 @@ Each developer works on a personal clone and feature/* branch; main receives rev
 
 | Path | Responsibility | Current contents |
 |---|---|---|
-| backend/ | API, incident state, event orchestration | P0 receiver/T05; P1 durable incident/outbox and route runner; full API pending |
-| frontend/ | Resident/responder dashboards | Placeholder |
-| simulator/ | Synthetic sensors, displays, scenarios | Sensor/command/ACK contracts; actual simulated display application/ACK/clearing verified |
+| backend/ | API, incident state, event orchestration | Durable notifications/incidents, Group orchestration, local sessions and actual-CSE role views |
+| frontend/ | Resident/responder dashboards | Buildless HTML/CSS/JS and SVG schematic; browser QA pending |
+| simulator/ | Synthetic sensors, displays, scenarios | Typed sensors/occupants, independent display application/ACKs and scenarios |
 | onem2m/ | CSE adapter, registration, SUB, Group, ACP | Verified local HTTP/bootstrap/decisions/Group/fopt/scoped ACPs; MQTT/full authentication pending |
 | mec/ | Edge risk logic and future MEC/IPE integration | Pure graph/synthetic policy with unit tests; no MEC API/deployment |
 | infra/ | Local/shared deployment configuration | Local CSE/core Dockerfiles and isolated Compose; MEC/shared deployment pending |
-| tests/ | Unit, CSE, MEC, fault and E2E tests | Offline unit cases + explicit actual-CSE T05 selection |
+| tests/ | Unit, CSE, MEC, fault and E2E tests | Python/Node units; actual T05/routes/Group/role-API gates; MEC/fault expansion pending |
 | fixtures/ | Synthetic graph | Existing JSON preserved |
 | docs/ | Requirements, contracts, workflow and evidence rules | Revised specifications |
 | evidence/ | Sanitized executed-run evidence | Ignored local run output; actual CSE PASS requires its own trace |
 | references/ | Reference index and permitted source files | Index only; external rubric inspected in place |
 
-P0 uses a dependency-free Python protocol core and Docker Compose. ACME is pinned to its published package 2026.5.1; its actual installed dependency list is captured by the CSE entrypoint. The Python image uses the 3.12-slim-bookworm family, not an immutable digest; resolve and record its digest/transitive lock before claiming fully locked deployment. FastAPI and the Vue/TypeScript/Vite frontend remain later application choices. Local alternatives and configuration are in [ENVIRONMENT](docs/ENVIRONMENT.md).
+The application uses Python's standard library and buildless HTML/CSS/JavaScript (ADR-013); no third-party application runtime dependency was added. Docker Compose supplies the actual ACME CSE, pinned to package 2026.5.1; its installed dependency list is captured by the CSE entrypoint. The Python image uses the 3.12-slim-bookworm family; resolve its immutable digest/transitive lock before claiming fully locked deployment. FastAPI/Vue were initial proposals. Local alternatives and configuration are in [ENVIRONMENT](docs/ENVIRONMENT.md).
 
 ## Specifications
 
@@ -85,7 +138,10 @@ Read [AGENTS](AGENTS.md), then the following documents before implementation:
 |---|---|
 | [P0 implementation](docs/IMPLEMENTATION_P0.md) | Current implementation slice, gates and limitations |
 | [PRD](docs/PRD.md) | Functional requirements and scope |
+| [SCENARIO](docs/SCENARIO.md) | User-selected ten-floor engine, preserved source, missing movement rules and integration gates |
+| [EVACUATION_MODEL](docs/EVACUATION_MODEL.md) | Fixed/moving model, explicit assumptions, clocks, queues, population conservation and commands |
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | Option C, resources, module and event contracts |
+| [ROLE_API](docs/ROLE_API.md) | Local sessions, role endpoints, CSE snapshots and stale behavior |
 | [DEPLOYMENT](docs/DEPLOYMENT.md) | Local Sandbox/CSE plan, registration and fallback gates |
 | [ENVIRONMENT](docs/ENVIRONMENT.md) | Personal PC, shared server, Raspberry Pi and configuration |
 | [TEAM_WORKFLOW](docs/TEAM_WORKFLOW.md) | Branches, ownership, PRs and integration |

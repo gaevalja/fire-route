@@ -1,0 +1,49 @@
+# Shared fixed-location guidance and moving synthetic residents
+
+Decision date: 2026-11-12. The user requested both modes with realistic behavior and authorized the team to choose assumptions because no measured geometry or population data is available. The supplied fire_evac engine/configuration remains unchanged. This document defines a new FireRoute evacuation layer, not behavior already present in that engine.
+
+## Scope and evidence
+
+Both modes consume the same current 162-zone hazard frame, topology and policy. A fixed-location query recomputes the route from a selected room without moving anyone. Moving residents have independent seeded speed/departure parameters, traverse edges over time, queue when an edge is full and recompute at nodes. Occupants who reach an external exit are counted evacuated once; blocked people remain in remaining counts. These are simulated states, not detected people, casualty predictions or certified safe routes.
+
+NIST TN 1822 identifies pre-evacuation, movement/navigation, exit usage, route availability and flow constraints as model verification areas: [NIST publication](https://www.nist.gov/publications/process-verification-and-validation-building-fire-evacuation-models). NIST's stair movement research shows substantial variation and dependence on geometry/density/delay: [NIST TN 1839 publication](https://www.nist.gov/publications/movement-stairs-during-building-evacuations). These references motivate model components and tests; they do not validate FireRoute's parameters. No NIST numeric parameter is silently imported as a universal value.
+
+## Explicit assumptions
+
+The versioned fixtures/evacuation_assumptions.json file records all added dimensions, speed ranges, delay ranges, capacities and thresholds as ASSUMED_NOT_CALIBRATED. Relative sizes in the source config are never interpreted as metres. Default population is two synthetic people per room (170 total); individual speed/departure variability uses a separate RNG so the original hazard RNG is unaffected. Any sensitivity analysis must identify the policy/config hash.
+
+Two synthetic external exit nodes EXIT_A/EXIT_B are connected to F1-L. This maps the source's two entrance markers by a documented project assumption. Elevators remain hazard zones but have no evacuation edges. Roof connects to both stairs as in the source topology, but is not an exit or guaranteed refuge. Horizontal connections follow the source layout; these are schematic assumptions, not a surveyed floor plan.
+
+Routing minimizes estimated travel time using assumed lengths, individual speed, a declared stair multiplier, heuristic smoke slowdown and current edge loading. Collapse or configured fire/smoke thresholds exclude a node. These thresholds are demo policy, not tenability/visibility/toxicity limits. A blocked origin has no verified route. Persons already on an edge whose endpoint becomes blocked freeze as BLOCKED_IN_TRANSIT rather than teleporting, disappearing or being declared dead. The current model omits overtaking, physical crowd forces, human perception/decision psychology, assisted evacuation and toxic dose.
+
+## Time, movement and counts
+
+The fire engine still advances one simulated second at a time and commits collapse at minute boundaries. Each evacuation tick accepts exactly the next second; exact duplicate frames are idempotent and conflicting/old/skipped states are rejected. All current-frame zones are validated together. Public snapshots exclude the engine's private future target/anchor/RNG data. Real UTC transport timestamps are separate from simulation time.
+
+Movement proceeds in deterministic order: advance in-flight residents up to the edge end, mark actual arrivals/exit completion, then allocate free edge capacity to waiting residents using waiting time and stable IDs. A resident cannot cross multiple edges in one tick. Opposite directions share a link's finite occupancy capacity. Queue waiting affects route choice; fixed queries do not mutate the population. Complete one-tick discrete integration is deliberately conservative rather than an exact continuous pedestrian model.
+
+Population conservation must hold: total = evacuated + remaining at every tick. Zone counts are assigned to the last reached node; moving_count explicitly identifies occupants between that node and the next. Per-person edge target/progress retains the actual simulated position. No-route/in-transit-blocked occupants remain present and can never inflate evacuated counts. Unknown/stale communication is a separate API state, not a zero occupant count.
+
+## Integration gates
+
+The headless wrapper exports only current states from the unchanged source into an ignored bounded JSONL trace. Python replay and the CSE gate consume that trace; this is explicit synthetic replay, not a physical sensor or an independently invented fire model. T23 must create/read actual frame CINs and consume their real subscriptions before processing. Fixed decisions and private moving/occupancy snapshots are separate actual CSE records. Group/fopt controls three independently ACKing simulated signs for the selected fixed guidance origin; it does not claim those signs display every resident's individual route.
+
+Unit verification covers travel time, delay, queue capacity/fairness, no teleportation, rerouting, collapse exclusion, no-route, population conservation, duplicate/clock behavior and reproducibility. Actual-CSE proof is separate. The original three-floor API/UI remains a regression profile; the new selected dashboard is implemented but requires its own actual gate and browser checks. Neither source/model tests nor UI source validate physical evacuation predictions or complete MEC.
+
+## Implemented commands and dashboard boundary
+
+make scenario-preview exports 181 source states by default and runs the pure model offline, explicitly CSE=NOT_RUN. make p1-scenario publishes each current state to the actual CSE, waits for its real notification before advancing people, persists fixed/public versus moving/private results and checks Group/independent ACKs at 60-second milestones. The gate also checks real resident denials of private moving/occupancy CINs. It is prepared, not PASS until executed.
+
+make p1-scenario-dashboard checks authenticated HTTP views/actions and stale clearing against the real CSE-backed selected app. make demo-scenario-up exports up to 1800 source seconds by default and starts that app at http://127.0.0.1:3001. Log in with the private ignored role codes. Responder can select fixed versus moving view and an individual synthetic resident, advance 1/30 seconds, play/pause/reset or stop display-c. Resident sees only approved fixed-origin guidance; moving/occupancy records are responder-only. Fixed origin is a configuration value, not yet a per-browser API query parameter. Signs announce that one fixed query's common exit/status.
+
+The selected app starts paused. Pausing beyond the actual sensor TTL removes directions and individual positions/counts. In-flight progress is drawn on schematic same-floor links; inter-floor transit is identified by its last node/target rather than a measured 3D coordinate. The source preview remains a separate standalone tool. Actual selected HTTP/CSE execution and browser rendering/accessibility are separately tracked in STATUS; static files and unit models cannot pass those gates.
+
+## Reading a paused result
+
+Live TTL and historical analysis are separate: after 30 wall seconds paused, the live view becomes STALE while saved scenario-results.jsonl snapshots remain available. Read simulation_second for model time, moving.content.population for counts/states, fixed_route.content for the fixed query and delivery_state/ack_count for actual sign application. The population states add to total: remaining includes moving, queued, pre-departure, no-route and blocked-in-transit people; it is not synonymous with casualties or rescue-required occupants.
+
+Pause/selection UI fix: the selected responder dashboard now keeps the last verified same-incident resident list and can retrieve the latest committed historical CSE snapshot via the protected /snapshot endpoint. It labels the recorded observation time/simulated second and renders historical positions separately; live route guidance stays STALE/UNKNOWN with no direction. Polling no longer rebuilds unchanged select options. Logout, role change or incident reset clears private cached selections. An absent snapshot stays unavailable rather than fabricating residents. The extended actual HTTP/CSE gate passed 18 checks in evidence/20261112-121211Z-6e06237b/, including historical data after live expiry. Browser dropdown/visual interaction remains unverified; the earlier 15-check gate alone did not verify this addition.
+
+Compare exit arrivals over simulated time, observed T50/T90/T100, queue peak/location, no-route/in-transit-blocked counts, exit/path changes and incomplete ACKs. routing_cost is an assumed current travel-time cost for the fixed room, not the population's observed completion time or network latency. A fixed exit can change from occupancy/smoke costs even with no blocked nodes. Same-seed/config traces with the same sampling interval are required for controlled comparisons. The +30 action accepts every intermediate fire frame but publishes population snapshots at the action end, so fine-grained peaks/times need automatic/one-second result sampling.
+
+Actual baseline core/HTTP gates now pass (STATUS links originals). The user's first manual run stopped at second 208 with 135/170 at exit, 26 moving and nine queued. A read-only report and chart are at evidence/20261112-082427Z-4c65518c/. Source/model/network evidence remains distinct; no experimental safety validation or measured E2E latency is claimed.

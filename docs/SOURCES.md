@@ -2,6 +2,8 @@
 
 Review completed: 2026-11-11 (Asia/Seoul); research began 2026-11-10. User-confirmed scope is authoritative for project choices. Standard/API behavior still requires the acquired version's documentation and actual execution. A research tool access error does not prove that a server is down or that authorization is the only cause.
 
+Local scenario source added/reviewed: 2026-11-12. This addition does not change the recorded access limits of the standards/deployment sources.
+
 ## 1. Primary material and inspected references
 
 | ID | Source / inspected edition | What is established | Limit / required next evidence |
@@ -16,6 +18,11 @@ Review completed: 2026-11-11 (Asia/Seoul); research began 2026-11-10. User-confi
 | S08 | [ETSI MEC Sandbox Help](https://mecwiki.etsi.org/index.php?title=MEC_Sandbox_Help) | Sandbox models emulated network/platform behavior; external app instance IDs and API subsets are documented | Not proof of actual local deployment, eligible-host orchestration or installed API support |
 | S09 | [ACME supported features](https://acmecse.net/home/Supported/) and [installation](https://acmecse.net/setup/Installation/) | Documents MN/IN types, SUB, Group/fopt, ACP, discovery and bindings; minimum Python 3.11 | Actual T05/P1_ROUTES/P1_GROUP verify the selected local IN-CSE resource/Group/ACK/ACP slice; MN/registrar, full auth/TLS, discovery and MQTT remain unverified |
 | S10 | [Organizer output/publication notice](https://estimed.etsi.org/news/estimed_hackathon2/) | Source Apache-2.0, non-code CC BY 4.0 described for outputs | Repository license files, third-party notices and actual publication remain future work |
+| S11 | User-selected local fire_evac folder; byte-preserved under simulator/scenarios/fire_evac/ with manifest.json | Engine/config/UI/test inspected; 10 floors + roof/162 zones, seeded wind/fire/smoke/collapse rules; original engine tests executed | No CSE/MEC/routing/occupant behavior exists in this source; no license declaration supplied; T23/T24 and attribution review remain open |
+| S12 | [NIST TN 1822 publication, 2013](https://www.nist.gov/publications/process-verification-and-validation-building-fire-evacuation-models), inspected 2026-11-12 | Defines model verification areas covering departure behavior, motion/navigation, exits, route availability and flow restrictions | Guides component tests, not proof that FireRoute is experimentally validated or standards-certified |
+| S13 | [NIST stair movement publication, 2014](https://www.nist.gov/publications/movement-stairs-during-building-evacuations), inspected 2026-11-12 | Documents variation and dependence on geometry, speed, density and delay | No universal numeric speed/capacity is adopted; FireRoute values remain explicitly assumed and uncalibrated |
+
+S11 source: the user's C:\Users\lilkid\Downloads\fire_evac was read via its WSL mount. The seven-file snapshot contains README.md, config.js, engine.js, app.js, index.html, styles.css and test_engine.js, all unchanged. Canonical file-map bundle SHA-256: 63ae8e4226d5865ff58a0b4cd5657fb06fbe71d16c2e7ad5a9e4208f0f622371. The original directory is not modified or required at runtime. Original test entrypoint: node simulator/scenarios/fire_evac/test_engine.js (make test-scenario). Its four existing groups cover topology/spread/elevator isolation, smoke cap/end/collapse cap, second/minute timing and reproducibility. Execution is pure engine evidence, not CSE/MEC proof; see SCENARIO.md and STATUS.md.
 
 ## 2. Use and update rules
 

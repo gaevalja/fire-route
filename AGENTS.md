@@ -4,6 +4,8 @@
 
 Build **FireRoute: Intelligent Fire Evacuation and Rescue Guidance System**, a reproducible simulation-based hackathon PoC using actual oneM2M and ETSI MEC implementations. Repository and checkout name: **fire-route**. Do not claim certified fire detection, real occupant positioning, or guaranteed safe evacuation.
 
+Selected scenario: the user's fire_evac engine (floors 1–10 plus roof, 162 hazard zones), preserved under simulator/scenarios/fire_evac/. Keep its engine/configuration unchanged. The user subsequently authorized both fixed-origin and moving-resident modes and delegated unsupplied geometry/population choices. Follow SCENARIO.md, EVACUATION_MODEL.md and fixtures/evacuation_assumptions.json: these are explicit added assumptions, never supplied fire-model rules or measured data. The existing three-floor runs remain regressions. Never convert fire index to temperature or label assumed human behavior/geometry as validated reality.
+
 Read this file, README.md, then every specification in docs/ before changing architecture or implementation. Functional authority is docs/PRD.md; protocol and module contracts are in docs/ARCHITECTURE.md; phase names P0–P4 are defined only in docs/ROADMAP.md. docs/STATUS.md is the single progress record. docs/SOURCES.md distinguishes user-confirmed requirements, inspected sources, drafts, and missing evidence.
 
 The latest explicit user instruction controls the authorized scope. Do not introduce an additional phase approval request when the user has already authorized that work. A documentation-only task authorizes no service implementation, deployment, push, or PR creation.
@@ -28,12 +30,12 @@ The latest explicit user instruction controls the authorized scope. Do not intro
 
 ## Engineering and data rules
 
-- Proposed greenfield stack: Python 3.12 (minimum 3.11), FastAPI/pytest; Vue 3/TypeScript/Vite; Docker Compose where supported. Preserve any existing implementation stack; verify runtime and dependencies before claiming it works.
+- Current local application stack: Python 3.12 (minimum 3.11), standard-library API/unittest and buildless HTML/CSS/JavaScript; Node also exports bounded source-engine traces with built-in modules (.node-version records tested 24.22.1). Node is not installed into the Python app image. FastAPI/Vue were initial proposals; justify new dependencies.
 - Use a real configurable CSE implementation. Local ACME 2026.5.1 passed P0 T05, P1_ROUTES and P1_GROUP in the user's Docker environment, including actual IN-CSE resources, notifications, decisions, Group/fopt, independent simulated device ACKs and scoped ACP denials. MN-CSE/registrar, full authentication/TLS, discovery and MQTT still need verification. Use STATUS.md's evidence rather than inferring complete support.
 - Local development must be possible without the shared server: use a real local CSE, or an isolated Python CSE process if Docker is unavailable. Mock-only work may cover contracts/UI/unit tests, but cannot satisfy real-CSE gates.
 - The shared x86 Ubuntu server is for integration, demo, logs, and permitted Local Sandbox deployment. Raspberry Pi is an IoT/Edge endpoint; its model is unknown. Do not assume full Sandbox support on ARM64.
 - Define event_id, incident_id, route_version, command_id, timestamp_utc, source, and simulation provenance as appropriate to each contract. Validate inputs, idempotence, ordering, TTL, recovery, and acknowledgement identity.
-- Synthetic smoke index is unitless 0–100; threshold 70 is a demo policy. Temperature measurements must declare their unit and synthetic/physical source. No real ppm or certified thresholds may be inferred.
+- Fire/smoke indices retain the supplied 0–100 relative meaning. The new evacuation layer declares fire>=55, smoke>=70 or collapse as assumed demo blocking policy; these are not tenability or physical visibility limits. All geometry, speed, delay, population and capacity values remain explicit uncalibrated assumptions. Temperature needs an independent source/unit; no fire-index conversion, real ppm or certified threshold may be inferred.
 - Show STALE/UNKNOWN for missing or old observations and NO_VERIFIED_ROUTE when no path exists. Clear previous directions on a no-route command. Do not clear a hazard simply because a sensor is silent.
 - Resident and responder permissions must be enforced in backend access checks and actual CSE ACPs, not only in UI routes. Remaining-occupant records are synthetic, responder-only, and timestamped; unknown counts remain unknown.
 - Keep business logic independent of CSE and UI frameworks. Minimal persistent application state may support deduplication/outbox recovery; standards resources remain in the CSE.

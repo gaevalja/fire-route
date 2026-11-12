@@ -14,7 +14,8 @@ AE_ROLES = {
 
 
 def bootstrap(client: CSEClient, base: str, namespace: str, callback: str, retention_seconds: int,
-              *, decision_policies: bool = False, display_callbacks: dict[str, str] | None = None) -> dict:
+              *, decision_policies: bool = False, display_callbacks: dict[str, str] | None = None,
+              dashboard: bool = False) -> dict:
     if not re.fullmatch(r"[a-z][a-z0-9_-]{2,47}", namespace):
         raise ValueError("Invalid run namespace")
     parent = "/" + base
@@ -36,16 +37,21 @@ def bootstrap(client: CSEClient, base: str, namespace: str, callback: str, reten
     if len({a["ae_id"] for a in actors.values()}) != len(actors):
         raise ProtocolError("CSE did not provide distinct actor AE-IDs")
     policy_name = namespace + "__telemetry-policy"
+    telemetry_rules = [{"acor": [actors["sensor"]["ae_id"], actors["controller"]["ae_id"]], "acop": 3},
+                       {"acor": [client.originator], "acop": 63}]
+    if dashboard:
+        telemetry_rules.append({"acor":[actors['responder']['ae_id']],"acop":2})
     policy = client.ensure(parent, 1, {
         "rn": policy_name, "lbl": labels, "et": expiry,
-        "pv": {"acr": [{"acor": [actors["sensor"]["ae_id"], actors["controller"]["ae_id"]], "acop": 3},
-                         {"acor": [client.originator], "acop": 63}]},
+        "pv": {"acr": telemetry_rules},
         "pvs": {"acr": [{"acor": [client.originator], "acop": 63}]},
     })
     # P1 creates scoped policies before its CNTs, preserving P0's verified setup.
     decision_acps = {}
-    if decision_policies:
-        for name, readers in {"hazards": ["responder"], "routes": ["resident", "responder"]}.items():
+    if decision_policies or dashboard:
+        readers_by_name={"hazards": ["responder"], "routes": ["resident", "responder"]}
+        if dashboard:readers_by_name.update(status=['resident','responder'],diagnostics=['responder'])
+        for name, readers in readers_by_name.items():
             resource = client.ensure(parent, 1, {
                 "rn": namespace + "__" + name + "-policy", "lbl": labels, "et": expiry,
                 "pv": {"acr": [{"acor": [actors["controller"]["ae_id"]], "acop": 3},
@@ -55,9 +61,11 @@ def bootstrap(client: CSEClient, base: str, namespace: str, callback: str, reten
             })
             decision_acps[name] = resource["ri"]
     containers = {}
-    for role, names in {"sensor": ["telemetry"], "controller": ["hazards", "routes"],
+    names_by_role={"sensor": ["telemetry"], "controller": ["hazards", "routes"],
                         "display-a": ["commands", "acks"], "display-b": ["commands", "acks"],
-                        "display-c": ["commands", "acks"], "occupancy": ["observations"]}.items():
+                        "display-c": ["commands", "acks"], "occupancy": ["observations"]}
+    if dashboard:names_by_role['controller']+=['status','diagnostics']
+    for role, names in names_by_role.items():
         for name in names:
             attrs = {"rn": name, "lbl": labels, "mni": 1000, "et": expiry}
             if role == "sensor":
@@ -68,14 +76,24 @@ def bootstrap(client: CSEClient, base: str, namespace: str, callback: str, reten
             elif role in display_callbacks:
                 device, controller = actors[role]["ae_id"], actors["controller"]["ae_id"]
                 writer, reader = (controller, device) if name == "commands" else (device, controller)
+                rules=[{"acor": [writer], "acop": 3}, {"acor": [reader], "acop": 2},
+                       {"acor": [reader], "acop": 1, "acod": [{"ty": 3, "chty": [23]}]},
+                       {"acor": [client.originator], "acop": 63}]
+                if dashboard:rules.append({'acor':[actors['responder']['ae_id']],'acop':2})
                 display_policy = client.ensure(parent, 1, {
                     "rn": namespace + "__" + role + "-" + name + "-policy", "lbl": labels, "et": expiry,
-                    "pv": {"acr": [{"acor": [writer], "acop": 3}, {"acor": [reader], "acop": 2},
-                                    {"acor": [reader], "acop": 1, "acod": [{"ty": 3, "chty": [23]}]},
-                                    {"acor": [client.originator], "acop": 63}]},
+                    "pv": {"acr": rules},
                     "pvs": {"acr": [{"acor": [client.originator], "acop": 63}]},
                 })
                 attrs["acpi"] = [display_policy["ri"]]
+            elif role=='occupancy' and dashboard:
+                occupancy_policy=client.ensure(parent,1,{
+                    'rn':namespace+'__occupancy-policy','lbl':labels,'et':expiry,
+                    'pv':{'acr':[{'acor':[actors['occupancy']['ae_id']],'acop':3},
+                                 {'acor':[actors['responder']['ae_id']],'acop':2},
+                                 {'acor':[client.originator],'acop':63}]},
+                    'pvs':{'acr':[{'acor':[client.originator],'acop':63}]}})
+                attrs['acpi']=[occupancy_policy['ri']]
             resource = client.ensure(actors[role]["path"], 3, attrs)
             containers[role + "/" + name] = {"ri": resource["ri"], "path": actors[role]["path"] + "/" + name}
     return {"actors": actors, "containers": containers, "telemetry_policy_ri": policy["ri"], "namespace": namespace}

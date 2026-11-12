@@ -35,7 +35,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: real SUB → compute → route CIN → GRP/fopt → ACK; shared live incident/version.
 - Verify: T01–T07, T15, T18–T20 and integrated scenario.
 - Judge evidence: one correlated run spanning both roles, resource tree and error cases.
-- Current status: IMPLEMENTED_UNVERIFIED for the full scenario; actual P1_GROUP PASS proves sensor → notification → computed route CIN → real fan-out → simulated device application/ACK. Both live role views and synthetic occupants remain unimplemented; no complete multi-application scenario score is claimed.
+- Current status: VERIFIED for the legacy three-floor backend and role HTTP/CSE slice. P1_GROUP and P1_DASHBOARD prove sensor → notification → computed route CIN → real fan-out → simulated device ACK plus two role-scoped APIs/synthetic occupants, expiry and incomplete delivery. The selected ten-floor source and fixed/moving model pass source/unit/offline verification; selected CSE/core/HTTP/UI code is IMPLEMENTED_UNVERIFIED until its new actual gates/browser QA run. Full recovery and MEC remain open; no final scenario score is claimed.
 
 ### 4. Quality of Article — selected
 
@@ -62,7 +62,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: source, lockfiles, README, setup/test commands, CI, licenses, evidence index and article link.
 - Verify: new environment reproduction from the release commit; link/secret/license review.
 - Judge evidence: public repository/release URL, CI output and reproduction log.
-- Current status: PARTIAL implementation for the standalone submission repository. Actual T05/P1_ROUTES/P1_GROUP evidence is recorded and the user requested a feature-branch checkpoint commit/push. Gap: remote publication must be confirmed from Git output; fresh-clone reproduction, executed CI, release and article link remain unverified.
+- Current status: PARTIAL implementation. The user successfully pushed foundation checkpoint 80f6e87 to feature/p0-cse-foundation; subsequent role-dashboard work is local on a stacked feature branch. Actual T05/routes/Group/role HTTP-CSE evidence is recorded. Fresh-clone reproduction, executed CI, release, dashboard publication and article link remain unverified.
 
 ### 7. Promotion of oneM2M — supporting
 
@@ -89,7 +89,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: resource walkthrough, methodology/tradeoff notes, role-specific Q&A and rehearsal.
 - Verify: P4 peer interview covers resources, protocols, failure handling, MEC placement, simulation and benefits.
 - Judge evidence: presentation, diagrams and reproducible demo/answers; interview outcome belongs to judges.
-- Current status: NOT_STARTED / NOT_RUN. Gap: no team rehearsal or implemented integration to explain.
+- Current status: NOT_STARTED for rehearsal / NOT_RUN. Actual local CSE/role integration provides concrete material; team explanation, MEC methodology and peer interview still need preparation.
 
 ### 10. Security and Privacy — selected
 
@@ -98,7 +98,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: TLS/CA configuration, role credentials, CSE ACPs, backend authorization, secret-safe logs.
 - Verify: T09 and T15; permit intended actions, deny unauthorized writes/reads and identity misuse.
 - Judge evidence: transport configuration/connection proof, ACP read-back and positive/negative outputs.
-- Current status: IMPLEMENTED_UNVERIFIED for full security; actual P1_GROUP proves six scoped CSE denials (403/4103) and authorized traffic, including controller/device ACK forgery and resident fan-out protection. Authentication/TLS/privacy gates remain unverified, and the CSE reports a default-secret warning; header identity alone does not satisfy this row.
+- Current status: PARTIAL verified local protection. P1_GROUP proves six scoped CSE denials; P1_DASHBOARD verifies separate role sessions, direct backend denial and actual CSE resident occupant denial. Full CSE-originator authentication/TLS remain unverified and the default-secret warning remains; local HTTP/header identity does not satisfy official Expert secure-protocol requirements.
 
 ### 11. Data Interoperability and Discoverability — selected, tiered scope
 

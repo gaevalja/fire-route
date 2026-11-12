@@ -7,6 +7,7 @@ COPY onem2m/ onem2m/
 COPY simulator/ simulator/
 COPY mec/ mec/
 COPY fixtures/ fixtures/
+COPY frontend/ frontend/
 COPY tests/ tests/
 COPY infra/ infra/
 COPY compose.yaml pyproject.toml Makefile .python-version LICENSE README.md ./
