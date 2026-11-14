@@ -22,6 +22,10 @@ class Resident:
     evacuated_at_s: int | None = None
 
 
+class FrameOrderError(ValueError):
+    """Rejected before movement: explicit reset or the next source frame required."""
+
+
 class Evacuation:
     def __init__(self,assumptions=None):
         self.navigation = Navigation(assumptions)
@@ -41,13 +45,13 @@ class Evacuation:
             if data == self.last:
                 return False
             if self.last['ended']:
-                raise ValueError('The original fire scenario has ended')
+                raise FrameOrderError('The original fire scenario has ended')
             if any(data[k] != self.last[k] for k in ['incident_id','source','seed','wind_mps','source_manifest_sha256']):
-                raise ValueError('Scenario context changed without explicit reset')
+                raise FrameOrderError('Scenario context changed without explicit reset')
             if second != self.last['simulation_second']+1 or data['event_id'] in self.identities:
-                raise ValueError('Duplicate/conflicting/outdated/skipped simulation frame')
+                raise FrameOrderError('Duplicate/conflicting/outdated/skipped simulation frame')
         elif second != 0:
-            raise ValueError('An explicit scenario starts at second zero')
+            raise FrameOrderError('An explicit scenario starts at second zero')
         else:
             self.populate(data['seed'])
         self.navigation.update(frame)

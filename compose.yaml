@@ -128,6 +128,26 @@ services:
       - ./evidence:/app/evidence
       - cse-metadata:/metadata:ro
       - ./.runtime/fire-evac-hazards.jsonl:/run/fire-route/hazards.jsonl:ro
+  scenario-faults:
+    profiles: ["faults"]
+    build: *core_build
+    entrypoint: ["python", "-m", "tests.integration.selected_faults"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    depends_on:
+      cse:
+        condition: service_healthy
+    environment:
+      <<: *core_environment
+      NOTIFICATION_PUBLIC_URL: http://scenario-faults:8000/onem2m/notify
+      SCENARIO_TRACE: /run/fire-route/faults.jsonl
+      CSE_BASE_URL: http://cse:8080
+      CSE_BASE_RESOURCE: fire-route-dev
+      CSE_RELEASE: "4"
+      CSE_ORIGINATOR: CAdmin
+    volumes:
+      - ./evidence:/app/evidence
+      - cse-metadata:/metadata:ro
+      - ./.runtime/fire-evac-faults.jsonl:/run/fire-route/faults.jsonl:ro
   scenario-app:
     profiles: ["scenario-demo"]
     build: *core_build

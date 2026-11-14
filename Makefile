@@ -35,6 +35,13 @@ hazard-preview: hazard-trace
 p1-hazards: hazard-trace
 	LOCAL_UID=$$(id -u) LOCAL_GID=$$(id -g) docker compose --profile hazards up --build --force-recreate --abort-on-container-exit --exit-code-from scenario-hazards
 
+.PHONY: fault-trace p1-faults
+fault-trace:
+	node simulator/export_scenario.cjs --seed 59 --wind 5 --seconds 470 --output .runtime/fire-evac-faults.jsonl
+
+p1-faults: fault-trace
+	LOCAL_UID=$$(id -u) LOCAL_GID=$$(id -g) docker compose --profile faults up --build --force-recreate --abort-on-container-exit --exit-code-from scenario-faults
+
 diagnose-cse:
 	$(PYTHON) -m infra.cse.diagnostics
 
@@ -68,13 +75,13 @@ test-group:
 	$(PYTHON) -m backend.p1_group
 
 compose-check:
-	docker compose --profile smoke --profile routes --profile group --profile dashboard --profile dashboard-check --profile scenario --profile scenario-demo --profile scenario-check --profile hazards --profile stability --profile analysis config --quiet
+	docker compose --profile smoke --profile routes --profile group --profile dashboard --profile dashboard-check --profile scenario --profile scenario-demo --profile scenario-check --profile hazards --profile stability --profile analysis --profile faults config --quiet
 
 up-core:
 	docker compose up -d --build cse
 
 down:
-	docker compose --profile smoke --profile routes --profile group --profile dashboard --profile dashboard-check --profile scenario --profile scenario-demo --profile scenario-check --profile hazards --profile stability --profile analysis down
+	docker compose --profile smoke --profile routes --profile group --profile dashboard --profile dashboard-check --profile scenario --profile scenario-demo --profile scenario-check --profile hazards --profile stability --profile analysis --profile faults down
 
 p0-smoke:
 	LOCAL_UID=$$(id -u) LOCAL_GID=$$(id -g) docker compose --profile smoke up --build --abort-on-container-exit --exit-code-from p0

@@ -12,6 +12,7 @@ from backend.delivery import DeliverySession,display_callbacks
 from backend.evidence import Evidence,source_identity
 from backend.notifications import NotificationService,NotificationStore,notification_server
 from backend.p0 import IntegrationBlocked,ROOT,subscription_refs,wait_for_cse
+from backend.scenario_ingestion import IngestionResult,accept_live_frame
 from onem2m.bootstrap import bootstrap
 from onem2m.client import CSEClient,CSEError,ProtocolError,strict_json
 from simulator.evacuation import Evacuation
@@ -73,18 +74,32 @@ class ScenarioSession:
         actual = sensor.resource(sensor.retrieve(parent+'/'+name),4)
         if actual['ri'] != cin['ri'] or strict_json(actual['con']) != body:
             raise ProtocolError('Actual scenario CIN read-back differs')
+        receipt=self.consume_received(frame,cin['ri'])
+        if receipt.state!='ACCEPTED':
+            raise ProtocolError('New actual frame did not advance the controller')
+
+    def consume_received(self,frame,cin_ri):
+        """Consume a matching durable real callback; never publish on rejection/replay."""
+        body=frame.to_dict()
         deadline = time.monotonic()+self.settings.notification_timeout
         while not self.inbox.find(frame.event_id) and time.monotonic() < deadline:
             time.sleep(.02)
         rows = self.inbox.find(frame.event_id)
-        if len(rows) != 1 or rows[0]['cin_ri'] != cin['ri'] or rows[0]['event'] != body:
+        if len(rows) != 1 or rows[0]['cin_ri'] != cin_ri or rows[0]['event'] != body:
             raise ProtocolError('Matching durable actual scenario notification missing')
         received = ScenarioFrame.parse(rows[0]['event'],self.hash)
-        if not self.model.accept(received):
-            raise ProtocolError('New actual frame did not advance the controller')
-        self.frames += 1
-        self.evidence.append('frames.jsonl',{'event_id':frame.event_id,'cin_ri':cin['ri'],
-            'simulation_second':body['simulation_second'],'sequence':body['sequence'],'zones':len(body['zones'])})
+        if received.data['incident_id']!=self.incident_id or received.data['source']!=self.namespace+':scenario-replay':
+            receipt=IngestionResult('REJECTED','BOUND_CONTEXT')
+        else:
+            receipt=accept_live_frame(self.model,received,self.settings,self.hash)
+        self.evidence.append('ingestion.jsonl',{'event_id':frame.event_id,'cin_ri':cin_ri,
+            'state':receipt.state,'reason':receipt.reason,'source_timestamp_utc':body['timestamp_utc'],
+            'sequence':body['sequence'],'route_version':self.model.last['sequence'] if self.model.last else None})
+        if receipt.state=='ACCEPTED':
+            self.frames += 1
+            self.evidence.append('frames.jsonl',{'event_id':frame.event_id,'cin_ri':cin_ri,
+                'simulation_second':body['simulation_second'],'sequence':body['sequence'],'zones':len(body['zones'])})
+        return receipt
 
     def write(self,key,name,value,actor='controller'):
         client = self.clients[actor]

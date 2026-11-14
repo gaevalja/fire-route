@@ -84,7 +84,10 @@ class ScenarioApp:
             result['route'] = {k:route[k] for k in ['source_node','target_exit','path','routing_cost','cost_unit']}
         elif route['status']!='NO_VERIFIED_ROUTE':
             raise ProtocolError('Invalid selected guidance state')
-        if diagnostics:
+        # An unrelated/malformed latest telemetry CIN must not prevent expiry of
+        # the last committed observation or expose old people as current.
+        fresh=-self.settings.max_clock_skew<=age<self.settings.sensor_ttl
+        if diagnostics and fresh:
             detail = latest(client,context.resources,'controller/diagnostics')
             occupancy = latest(client,context.resources,'occupancy/observations')
             if any(detail.get(k)!=route.get(k) or occupancy.get(k)!=route.get(k) for k in keys):

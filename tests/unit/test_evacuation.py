@@ -286,6 +286,14 @@ class SelectedViewUnitTests(unittest.TestCase):
         self.assertEqual(result['guidance_status'],'STALE');self.assertIsNone(result['route'])
         for key in ['population','residents','occupants']:self.assertNotIn(key,result)
 
+    def test_stale_committed_observation_expires_even_with_malformed_latest_telemetry(self):
+        self.payloads['controller/status']['observed_at_utc']='2020-01-01T00:00:00Z'
+        self.payloads['sensor/telemetry']={'invalid':'synthetic input'}
+        result=self.app.view('inc-unit','responder',diagnostics=True)
+        self.assertEqual(result['guidance_status'],'STALE');self.assertIsNone(result['route'])
+        for key in ['population','residents','occupants']:self.assertNotIn(key,result)
+        self.assertEqual(self.client.retrieve.call_count,2)
+
     def test_busy_or_mismatched_frame_clears_guidance(self):
         self.app.busy=True
         result=self.app.view('inc-unit','resident')
