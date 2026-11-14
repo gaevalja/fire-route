@@ -67,8 +67,11 @@ class Settings:
     cse_mode: str = "real"
     mec_mode: str = "unavailable"
     demo_mode: str = "simulator"
+    deployment_profile: str = "local"
 
     def __post_init__(self) -> None:
+        if self.deployment_profile != 'local':
+            raise ConfigurationError('Only the local profile is active; Hosted integration is deferred')
         http_url(self.cse_url, "CSE_BASE_URL")
         http_url(self.notification_url, "NOTIFICATION_PUBLIC_URL")
         if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", self.cse_base):
@@ -80,7 +83,7 @@ class Settings:
         if any(ch in self.admin_originator for ch in "\r\n"):
             raise ConfigurationError("Invalid originator header")
         if self.cse_mode != "real" or self.mec_mode != "unavailable" or self.demo_mode != "simulator":
-            raise ConfigurationError("P0 smoke supports real CSE + unavailable MEC + synthetic input only")
+            raise ConfigurationError("The local runtime supports real CSE + unavailable MEC + synthetic input only")
         if type(self.bind_port) is not int or not 0 < self.bind_port < 65536:
             raise ConfigurationError("Notification port out of range")
         import math
@@ -111,6 +114,7 @@ class Settings:
             "RESOURCE_RETENTION_SECONDS": ("retention_seconds", int),
             "EVIDENCE_ROOT": ("evidence_root", Path), "CSE_MODE": ("cse_mode", str),
             "MEC_MODE": ("mec_mode", str), "DEMO_MODE": ("demo_mode", str),
+            "FIREROUTE_PROFILE": ("deployment_profile", str),
         }
         kwargs = {}
         for key, (field, converter) in fields.items():
@@ -132,4 +136,5 @@ class Settings:
             "max_clock_skew_seconds": self.max_clock_skew, "ack_timeout_seconds": self.ack_timeout,
             "retry_limit": self.retry_limit, "resource_retention_seconds": self.retention_seconds,
             "security_profile": "isolated_local_HTTP_header_identity_only",
+            "deployment_profile": self.deployment_profile,
         }

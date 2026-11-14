@@ -4,7 +4,7 @@
 
 On 2026-11-12 the user selected `C:\Users\lilkid\Downloads\fire_evac` as the scenario source. Its README, configuration, engine, UI and tests were inspected. The seven original files are preserved byte-for-byte under `simulator/scenarios/fire_evac/`; `manifest.json` records SHA-256 hashes. That repository snapshot makes the source reproducible without access to a developer's Downloads directory. External originals are unchanged. The supplied folder has no license declaration; retain its provenance and resolve publication attribution in P4.
 
-This is the selected submission scenario. The existing `fixtures/building_3f.json`, three-floor dashboard and actual T05/routes/Group/dashboard evidence remain regression checkpoints. New source-frame/controller/CSE runners and a separate ten-floor role dashboard are implemented but require actual runtime verification. The user's latest direction is to implement both modes and choose missing dimensions/population assumptions; EVACUATION_MODEL.md defines that added layer. No MEC service is connected. Opening the supplied standalone index.html still runs the original local maker, not the CSE dashboard.
+This is the selected submission scenario. The existing `fixtures/building_3f.json`, three-floor dashboard and actual T05/routes/Group/dashboard evidence remain regression checkpoints. The selected source-frame/controller/CSE core and role HTTP baseline gates have passed. The natural-hazard actual CSE/core extension has also passed, while comprehensive browser/fault checks remain open. The user's latest direction is to implement both modes and choose missing dimensions/population assumptions; EVACUATION_MODEL.md defines that added layer. No MEC service is connected. Opening the supplied standalone index.html still runs the original local maker, not the CSE dashboard.
 
 ## Rules taken from the source
 
@@ -59,7 +59,7 @@ No Node runtime is installed in the Python image. Host Node 24.22.1 (.node-versi
 |---|---|---|
 | T22 source/engine | Seven hashes match source; original four test groups execute; seed/wind/topology/direction/caps/time/end checked | Imported; executed source checks PASS, exact output in STATUS |
 | T23 frame/CSE | Actual 162-zone CIN read-back and SUB; no future-state exposure; ordering/clock/provenance | Actual core baseline PASS for 181 frames; negative ordering subcases have unit coverage; broader live fault coverage remains pending |
-| T24 integrated scenario | Declared movement/exit policy, alternatives/collapse exclusion/no-route, Group/ACK and role views | Actual selected core and HTTP baseline PASS; manual 208-second run audited; full hazard-driven alternative/collapse/no-route/fault and browser QA remain incomplete |
+| T24 integrated scenario | Declared movement/exit policy, alternatives/collapse exclusion/no-route, Group/ACK and role views | Actual core, HTTP baseline and natural-hazard core PASS: blocked-original-path alternative, collapsed-node exclusion, no-route and stopped-display incomplete ACKs verified; full restart/fault and hazard browser QA remain incomplete |
 
 T05/routes/Group/dashboard remain regression commands for the three-floor checkpoint. T22 is an engine-level test and cannot pass T23/T24, MEC deployment or actual evacuation claims.
 

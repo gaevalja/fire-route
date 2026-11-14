@@ -8,6 +8,8 @@ The PDF labels Expert 4–5, Proficient 2–3 and Emerging 0–1; no category we
 
 Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 follows from good communication; #8 records genuine public technical participation only. #12/#14/#15/#17 are conditional. Phase names P0–P4 come only from ROADMAP.md.
 
+Current strategy: prioritize verified local operation/security/reproducibility (Phase 1), portable component/configuration preparation locally (Phase 2), separately instructed Hosted integration only (Phase 3), and publication by Nov 20 (Phase 4). MEC deployment/service rows remain conditional and unverified until real authorized evidence exists. Persistent internal key configuration, lifecycle diagnostics and the standalone worker can support security/GitHub/interview preparation but do not themselves establish Expert scores, complete authentication or MEC lifecycle compliance.
+
 ## 2. Criterion-by-criterion plan
 
 ### 1. Innovative use of oneM2M — selected
@@ -35,7 +37,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: real SUB → compute → route CIN → GRP/fopt → ACK; shared live incident/version.
 - Verify: T01–T07, T15, T18–T20 and integrated scenario.
 - Judge evidence: one correlated run spanning both roles, resource tree and error cases.
-- Current status: VERIFIED for the legacy three-floor backend and role HTTP/CSE slice. P1_GROUP and P1_DASHBOARD prove sensor → notification → computed route CIN → real fan-out → simulated device ACK plus two role-scoped APIs/synthetic occupants, expiry and incomplete delivery. The selected ten-floor source and fixed/moving model pass source/unit/offline verification; selected CSE/core/HTTP/UI code is IMPLEMENTED_UNVERIFIED until its new actual gates/browser QA run. Full recovery and MEC remain open; no final scenario score is claimed.
+- Current status: VERIFIED for the legacy three-floor backend and role HTTP/CSE slice. P1_GROUP and P1_DASHBOARD prove sensor → notification → computed route CIN → real fan-out → simulated device ACK plus two role-scoped APIs/synthetic occupants, expiry and incomplete delivery. The selected ten-floor core and role HTTP/CSE baseline gates have also passed (latest 18 assertions). The natural-hazard actual CSE/core gate also passed: 729 frames, blocked-path alternative, collapse exclusion, no-route and an intentionally incomplete stopped-device delivery; comprehensive browser QA remains pending. Full recovery and MEC remain open; no final scenario score is claimed.
 
 ### 4. Quality of Article — selected
 
@@ -62,7 +64,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: source, lockfiles, README, setup/test commands, CI, licenses, evidence index and article link.
 - Verify: new environment reproduction from the release commit; link/secret/license review.
 - Judge evidence: public repository/release URL, CI output and reproduction log.
-- Current status: PARTIAL implementation. The user successfully pushed foundation checkpoint 80f6e87 to feature/p0-cse-foundation; subsequent role-dashboard work is local on a stacked feature branch. Actual T05/routes/Group/role HTTP-CSE evidence is recorded. Fresh-clone reproduction, executed CI, release, dashboard publication and article link remain unverified.
+- Current status: PARTIAL implementation. The user pushed foundation checkpoint 80f6e87 and subsequently confirmed publishing dashboard checkpoint 7c5b396 to main. The natural-hazard extension is local on feature/p1-hazard-validation. Actual T05/routes/Group/role HTTP-CSE evidence is recorded. Fresh-clone reproduction, executed CI, release and article link remain unverified.
 
 ### 7. Promotion of oneM2M — supporting
 

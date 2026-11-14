@@ -1,6 +1,6 @@
-# FireRoute roadmap — complete submissions by 2026-11-20
+# FireRoute roadmap — local completion, then gated Hosted integration
 
-Planning baseline: 2026-11-11; progress updated 2026-11-12 (Asia/Seoul).
+Planning baseline: 2026-11-11; progress updated 2026-11-14 (Asia/Seoul).
 
 ## 1. Fixed dates and scope
 
@@ -11,17 +11,27 @@ Planning baseline: 2026-11-11; progress updated 2026-11-12 (Asia/Seoul).
 
 The [public schedule](https://onem2m-hackathon.io/schedule.asp) confirms development ends November 20, final evaluation November 23–25 and ceremony November 27. Exact submission cutoff/timezone, platform, article/video formats and presentation duration are still unverified; obtain them before the final day. The user-supplied latest notice takes precedence over older drafts. See SOURCES.md.
 
-The old detailed phase numbering is superseded by P0–P4 below; its functional work is retained and regrouped. Documentation completion in this revision does not complete any development phase.
+Current execution uses Phase 1–4 below under the user instruction dated 2026-11-14. Historical P0–P4 labels remain in commands, requirements, tests and earlier records for traceability; they no longer define execution order. Documentation completion does not complete a development phase.
 
-## 2. Phases, deliverables and gates
+## 2. Current phases, deliverables and gates
 
-| Phase / target dates | Deliverables | Concrete exit conditions / tests | Dependencies |
+| Current phase / planning window | Deliverables | Exit conditions and limits | Dependencies |
 |---|---|---|---|
-| P0 environment + basic oneM2M, Nov 11–12 | Local runtime/pins, real CSE profile/alternative, executable contracts, AE/CNT/CIN/SUB adapter, receivers and reproducible commands | Clean setup; actual sensor CIN read-back and SUB verification/notification (T05); basic contracts T21; version/base/IDs recorded | Personal runtime; CSE source/package access; no MEC credential dependency |
-| P1 actual fire-response E2E, Nov 12–15 | Selected fire_evac engine (10 floors + roof/162 zones), frame/CSE adapter, agreed movement graph/risk policy, ordered incident/outbox, real group control, 3 displays/ACKs, two live role views, separate synthetic occupants | T22–T24 plus T01–T07/T15/T18–T20 regression gates; matching profile/frame/incident/version; no-route clears displays and missing ACK stays incomplete | P0 client path; selected source is imported/tested; movement/exit policy still needs agreement |
-| P2 MEC deployment + oneM2M interworking, Nov 12–17 | Local Sandbox, Option C MN-CSE MEC App, Cloud IN-CSE registration, actual catalog/IPE and non-location service | T11/T16/T17 PASS with source/deployment and correlated MEC/IPE/CSE evidence; a fallback changes actual topology labels and ADR | Early source/host access investigation starts Nov 11; deployment needs authorized host and pinned P1 contracts |
-| P3 security/devices/recovery/performance, Nov 15–18 | Full ACP/TLS/auth tests, MQTT+HTTP, discovery/FCNT, restart/disconnect tests, latency report, optional Pi endpoint | T08–T10/T12–T13 and regression gates PASS; partial ACK/fan-out never counted complete; permissions and provenance verified | P1; MEC fault tests additionally require P2; P1 already includes 3 devices/basic permissions/fallback states |
-| P4 GitHub/article/video/presentation, outline Nov 11; finalize Nov 18–20 | Standalone repository/release, licensed source/docs, exact reproduction guide, article, video, presentation, evidence index and backup real run | New-environment reproduction; factual claims match verified tests; formats/links/secrets checked; final submission receipt by Nov 20 | Verified P0–P2 selected scope; P3 evidence as obtained; all omissions visible |
+| Phase 1 — local completion, Nov 14–17 | Preserve WSL2/Docker/actual ACME; finish local sensor/risk/routing/moving people/roles/Group/ACKs, least-privilege security, timeout/malformed/duplicate events, fault handling and evidence | Preserve the actual 729-frame hazard result; rerun affected real CSE gates; diagnose 137 from Docker state/events/memory/logs, remove default-key warning, prove restart persistence; broader security/recovery/UI gaps stay explicit | Existing local environment; no Hosted account/server dependency |
+| Phase 2 — portable MEC-ready structure, local work alongside Phase 1 | Independently executable risk component, versioned data interfaces, configurable CSE endpoint/identity, inactive MEC endpoint/auth settings, local/Hosted templates, Docker artifact | Local component/config/image checks; no invented MEC deployment/API; direct API and IPE-mediated paths remain distinct; document remote callback reachability | Existing pure model and local contracts; no Hosted access |
+| Phase 3 — Hosted integration, only after separate explicit instruction, planning Nov 17–18 if authorized | Confirm login/namespace/API/permissions; assess Option C, then A/B/another official supported topology; deploy only using verified interfaces; run real service and possible IPE flows | Actual lifecycle/API/IPE/network/timing evidence for claimed subsets; no access/deploy before separate instruction; unsupported/unavailable capabilities remain gaps | Stable local system, explicit instruction, actual Hosted permissions and acquired compatible guides |
+| Phase 4 — submission, draft now; finalize Nov 18–20 | Reproducible GitHub, Hackster.io Article, actual video, diagrams/resource tree, measured tests, interview slides and submission receipt | Working local submission by Nov 20 even if MEC is incomplete; include verified MEC results and visible omissions; no Expert guarantee | Local verified checkpoint; optional actual Phase 3 results |
+
+Historical mapping: P0/P1 and local portions of P3 feed current Phase 1; independent structure/config work feeds Phase 2; historical P2 deployment/interworking feeds gated Phase 3; historical P4 feeds Phase 4. Preserve all F01–F25/T01–T26 and existing make command names. T27 adds the controlled CSE restart diagnostic/persistence slice; it is not automatic application recovery.
+
+New-feature choices must document expected judging value, implementation cost, feasible test and failure risk. Current choices:
+
+| Work | Expected judging value | Cost / test | Risk and control |
+|---|---|---|---|
+| Stable private CSE key | Security/privacy and reproducible GitHub | Small adapter change; unit checks and actual restart read-back | Preserve one volume key; no silent rotation; controlled T27 compatibility now verified, broader durability/security remain open |
+| Docker stop diagnostics + persistence | Evidence quality, scenario reliability and interview explanation | Local orchestration + actual AE/CNT/CIN before/after restart | Read-only observation first; controlled stop is labeled; preserve volumes, leave unrelated resources untouched |
+| Portable analysis boundary | Future deployment and GitHub quality | Reuse pure model; standalone stream component and unit checks implemented; image execution pending | No guessed Hosted API, Kubernetes privileges or fake IPE |
+| Optional AI/FL/handover/location | Conditional rubric rows | Higher integration cost and additional environments | Deferred until selected local/system/submission gates are secure |
 
 ## 3. Parallel work and merge order
 
@@ -36,17 +46,16 @@ The old detailed phase numbering is superseded by P0–P4 below; its functional 
 
 Dependency chain: contracts/runtime → telemetry CIN/SUB → computed route/CSE record → real fan-out → independent ACKs → live views. MEC infrastructure investigation runs alongside this chain; a complete MEC E2E additionally joins the IPE/service path. Shared-server deployment/test runs are serialized or namespace-isolated; workstream development happens in personal clones.
 
-## 4. Risk checkpoints and scope cuts
+## 4. Current checkpoints and scope cuts
 
-- Nov 12: confirm real CSE round-trip and assign every missing ETSILabs/guide/server/registrar access item. Begin Option B assessment if Option C has a concrete blocker.
-- Nov 15: require the P1 real-CSE E2E. Stop adding optional features if this fails; focus on the broken hop and regression evidence.
-- Nov 16: choose a supported executable MEC topology based on evidence, C first then verified B/other official option. An ADR records reason, guide/implementation version and impact. A decision is not permission to modify a server.
-- Nov 17: require a real MEC-through-oneM2M trace for P2. If blocked, state that gap and preserve reproducible CSE functionality; do not substitute mock success.
-- Nov 18: freeze optional handover, location, FL, AI/MCP and unverified advanced semantics. Stabilize/reproduce the selected scope; P4 cannot be postponed.
-- Nov 19: clean-environment rehearsal, actual-run video backup, all submission links and evidence reviewed.
-- Nov 20: submit functioning artifacts and all required materials with time before the confirmed cutoff; retain submission receipt. No feature may be labeled finished solely because it is written in a document.
+- Nov 14 verified checkpoint: T27 controlled CSE stop/start, patched-profile 729-frame hazard E2E and selected-dashboard 18-check HTTP/CSE gates now pass. STATUS links original artifacts and independent audits. This resolves that lifecycle/regression sequence; next prioritize bounded actual-CSE malformed/duplicate/timeout handling, fault recovery and declared latency measurement. Browser QA, portable-image execution and publication artifacts remain parallel work. It is not full Phase 1 completion or permission for Hosted access.
+- Nov 14–16: retain passed local evidence, run CSE lifecycle/key/persistence checks and resolve real failures. No Hosted request is permitted during this work.
+- Nov 17: stabilize the selected local scenario and portable interfaces. Phase 3 starts only if separately instructed; lack of Hosted readiness does not block the local submission.
+- Nov 18: freeze optional handover/location/FL/AI work. Record actual Hosted supported/unsupported results if Phase 3 has run; otherwise document MEC as unverified. Finalize publication artifacts.
+- Nov 19: fresh-environment rehearsal, backup real-run video, article/diagrams/slides and evidence review.
+- Nov 20: submit functioning local system and all required materials before the confirmed cutoff; preserve the receipt. Exact cutoff/timezone/formats still require confirmation.
 
-If time is short, protect working/reproducible P0–P2 and complete P4 deliverables. Keep baseline authorization and honest failure handling; reduce optional features and additional Expert ambitions first. Unmet selected requirements remain visible rather than disappearing from STATUS.
+A working local release is mandatory even when MEC is incomplete. Keep baseline permissions and explicit failure states. Never substitute unit mocks, an inactive configuration template or co-located containers for actual MEC evidence.
 
 ## 5. First implementation slice
 
@@ -54,7 +63,7 @@ The first actual-CSE slice has passed T05 in the user's local environment (2026-
 
 The ordered incident/actual hazard-route CIN slice passed make p1-routes. make p1-group then passed actual Group/fopt, three independent display processes, command/ACK subscriptions, no-route clearing, expected-incomplete delivery after stopping one device and six ACP denials. The user committed/pushed that checkpoint (80f6e87). The stacked feature/p1-role-dashboards branch now passes make p1-dashboard: local sessions, both live role APIs, synthetic occupants, actual resident CSE denial, A/B/no-route, missing ACK, expiry and explicit reset. Browser QA and full stale-command/restart/dispatch recovery remain open; this is not full P1 completion or authenticated CSE security.
 
-Next: verify the dashboard manually in a browser, retain the actual evidence and review the stacked branch. In parallel, obtain TR-0086/Sandbox/server/registrar access for P2 immediately. If those remain unavailable, continue local security/discovery/fault evidence and P4 preparation without inventing a MEC integration. Keep Nov 16 topology and Nov 17 interworking gates. Shared/external deployment and any main merge retain their separate boundaries.
+These are historical implementation checkpoints. Current next work is Phase 1 local stability/security and Phase 2 local portability, followed by Phase 4 deliverables. Phase 3 Hosted access is deferred until a separate explicit instruction; current account/server readiness is not a blocker for local work.
 
 ## 6. Selected-scenario change, Nov 12
 
@@ -62,6 +71,8 @@ The user selected the supplied fire_evac engine rather than the old three-floor 
 
 Merge/development dependencies: (1) source manifest + frame schema/time semantics → (2) headless simulator publisher + actual CIN/SUB T23 → (3) agreed movement/exit/threshold mapping + collapse-aware route controller → (4) actual Group/ACK and both ten-floor role views T24. Source publisher/backend contracts, floor UI and policy/topology work can proceed in separate modules once their contracts are agreed. Occupant generation is a separate lane because the supplied engine has no residents/movement. No optional RL feature is introduced.
 
-Until the user supplies or the team explicitly records missing movement/entrance rules, do not fabricate a computed ten-floor evacuation result. Keep the Nov 20 deadline: assess T23/T24 at the Nov 15 P1 checkpoint and record any selected-scenario gap explicitly, rather than relabeling the old three-floor run as completed migration. P2 access investigation and P4 outlines remain parallel work.
+Until the user supplies or the team explicitly records missing movement/entrance rules, do not fabricate a computed ten-floor evacuation result. Keep the Nov 20 deadline: assess T23/T24 at the Nov 15 P1 checkpoint and record any selected-scenario gap explicitly, rather than relabeling the old three-floor run as completed migration. Current Phase 2 local design and Phase 4 outlines remain parallel work; Hosted access is separately gated.
 
-Latest direction: the user requested both modes and authorized assumed dimensions/population. The shared fixed/moving model, source trace wrapper, selected CSE session, protected ten-floor app and actual core/HTTP gate commands are now implemented. Analytic unit/offline model verification runs locally; actual selected CSE/HTTP checks and browser QA remain the next gates. Use T25/T26 alongside T23/T24. Do not add further pedestrian physics, RL or optional features before executing these prepared gates and retaining their evidence. MEC access investigation remains parallel and does not depend on the movement model.
+Latest direction: the user requested both modes and authorized assumed dimensions/population. The shared fixed/moving model, source trace wrapper, selected CSE session, protected ten-floor app and actual core/HTTP gate commands are now implemented. Actual selected core and role HTTP/CSE baseline checks have passed, including the extended 18-check gate; the user confirmed the requested manual selection/pause smoke check. On Nov 14, make p1-hazards also passed its actual CSE/core run with 729 frames, hazard stages and Group/independent ACKs; broader browser/fault QA and MEC remain next gates. Use T25/T26 alongside T23/T24. Do not add further pedestrian physics, RL or optional features before executing these prepared gates and retaining their evidence. Public guide review and local portability work remain independent of the movement model; no Hosted access is performed now.
+
+Nov 14 checkpoint: work from published main 7c5b396 on feature/p1-hazard-validation. The natural-hazard actual run now passes that T24 core slice; full P1, hazard browser QA and restart recovery remain open. Source seed 59/wind 5 gives reproducible blocked-path alternative/collapse/isolation with unchanged engine rules; default demo seed/population are retained. Under the latest strategy, continue local completion/portability and public guide review; no MEC deployment, Hosted access, lifecycle or API is verified. Preserve the Nov 20 submission deadline with a working local fallback.

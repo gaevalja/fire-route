@@ -1,6 +1,9 @@
 name: fire-route
 services:
   cse:
+    # Candidate graceful interrupt path; actual stop/restart gate must verify it.
+    init: true
+    stop_signal: SIGINT
     stop_grace_period: 30s
     build:
       context: .
@@ -26,10 +29,11 @@ services:
       cse:
         condition: service_healthy
     environment: &core_environment
-      CSE_BASE_URL: http://cse:8080
+      FIREROUTE_PROFILE: ${FIREROUTE_PROFILE:-local}
+      CSE_BASE_URL: ${CSE_CONTAINER_BASE_URL:-http://cse:8080}
       CSE_BASE_RESOURCE: fire-route-dev
       CSE_RELEASE: "4"
-      CSE_ORIGINATOR: CAdmin
+      CSE_ORIGINATOR: ${CSE_ORIGINATOR:-CAdmin}
       CSE_MODE: real
       MEC_MODE: unavailable
       DEMO_MODE: simulator
@@ -85,6 +89,45 @@ services:
       - ./evidence:/app/evidence
       - cse-metadata:/metadata:ro
       - ./.runtime/fire-evac-trace.jsonl:/run/fire-route/scenario.jsonl:ro
+  risk-worker:
+    profiles: ["analysis"]
+    build: *core_build
+    entrypoint: ["python", "-m", "mec.risk.worker"]
+    network_mode: none
+    read_only: true
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    stdin_open: true
+  stability-probe:
+    profiles: ["stability"]
+    build: *core_build
+    entrypoint: ["python", "-m", "tests.integration.cse_persistence"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    environment:
+      <<: *core_environment
+      # This test stops this Compose CSE; never probe an external override.
+      CSE_BASE_URL: http://cse:8080
+      CSE_BASE_RESOURCE: fire-route-dev
+      CSE_RELEASE: "4"
+      CSE_ORIGINATOR: CAdmin
+    volumes:
+      - ./evidence:/app/evidence
+      - cse-metadata:/metadata:ro
+  scenario-hazards:
+    profiles: ["hazards"]
+    build: *core_build
+    entrypoint: ["python", "-m", "backend.scenario_hazards"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    depends_on:
+      cse:
+        condition: service_healthy
+    environment:
+      <<: *core_environment
+      NOTIFICATION_PUBLIC_URL: http://scenario-hazards:8000/onem2m/notify
+      SCENARIO_TRACE: /run/fire-route/hazards.jsonl
+    volumes:
+      - ./evidence:/app/evidence
+      - cse-metadata:/metadata:ro
+      - ./.runtime/fire-evac-hazards.jsonl:/run/fire-route/hazards.jsonl:ro
   scenario-app:
     profiles: ["scenario-demo"]
     build: *core_build

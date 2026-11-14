@@ -2,16 +2,16 @@
 
 ## 1. Status and deployment choice
 
-Selected scenario update (2026-11-12): use the preserved fire_evac engine, floors 1–10 plus roof/162 zones, under simulator/scenarios/fire_evac/. SCENARIO.md defines authoritative source rules and the missing evacuation-policy decisions. Existing three-floor code and actual-CSE evidence remain regression checkpoints; the selected engine has not been connected to the controller/CSE/UI. The MEC target below is unchanged by this scenario choice.
+Selected scenario update: use the preserved fire_evac engine, floors 1–10 plus roof/162 zones, under simulator/scenarios/fire_evac/. SCENARIO.md and EVACUATION_MODEL.md define source rules and added assumed movement policy. Selected core and role HTTP/CSE baseline gates passed, including the 18-check historical-data gate on 2026-11-12. Existing three-floor code/evidence remain regressions. The natural-hazard actual CSE/core gate also passed on 2026-11-14: 729 source frames/notifications and five Group/ACK scenarios. Hazard browser and full recovery checks remain open. The MEC target below remains unimplemented.
 
-This is the target design, not an installed topology. **Option C is the first MEC deployment target**: host a oneM2M MN-CSE as a MEC App on a Local ETSI MEC Sandbox MEC Host. A separate Cloud IN-CSE is the intended registrar. The option names A–D and preference are user-confirmed; the exact acquired TR-0086 revision and deployment procedures still require review. Draft TR-0077 and GR MEC-DEC 051 describe evolving interworking; they do not prove that an installed Sandbox supports every described function. See SOURCES.md and DEPLOYMENT.md.
+Current strategy (ADR-019): preserve the actual local WSL2/Compose/IN-CSE architecture during Phase 1 and prepare portable components/configuration locally during Phase 2. Hosted access/deployment is forbidden until a separate Phase 3 instruction. The topology below is a conditional candidate, not an installed or confirmed Hosted design: assess whether MN-CSE as MEC App (Option C) and a separate registrar are supported, then consider A/B/another official topology only against acquired guide versions and actual permissions. Hosted login/namespace/administration descriptions come from the user's notice and are unverified. A working local submission remains possible with MEC unavailable.
 
 ~~~text
 Personal PCs: independent clones, local real CSE, module/unit tests
                             |
                      GitHub main + PRs
                             |
-Shared x86 Ubuntu integration environment (deployment-owned checkout)
+Future authorized MEC environment (placement/permissions unverified)
   +-- Local ETSI MEC Sandbox / MEC Platform
   |     +-- selected MEC Host / MEC App lifecycle
   |     |     +-- oneM2M MN-CSE (Option C target)
@@ -116,7 +116,7 @@ These are proposed FireRoute payloads inside CSE CIN content, not oneM2M primiti
 | OccupancySnapshot | incident_id, observations (1–100 OccupancyObservation entries) | schema_version/timestamp_utc/data_origin envelope; actual responder-only occupancy CIN; each entry retains its own source/time |
 | PublicStatus | event_id, incident_id, route_version, observed_at_utc, delivery | Actual controller/status CIN; delivery state/ack_count/expected_ack_count only, no private device or occupant details |
 | DiagnosticSnapshot | event_id, incident_id, route_version, devices, sensors | Actual controller/diagnostics CIN; responder READ only, explicit API field allowlist |
-| ScenarioFrame (implemented; actual CSE gate pending) | profile_id, source_manifest_sha256, event_id, incident_id, sequence, seed, wind_mps, simulation_second, ended, zones | Full 162-zone current fire/smoke/collapse snapshot; real timestamp_utc is separate from simulated time; custom CIN payload/typed decoder per SCENARIO.md |
+| ScenarioFrame (actual baseline and natural-hazard CSE ingestion verified) | profile_id, source_manifest_sha256, event_id, incident_id, sequence, seed, wind_mps, simulation_second, ended, zones | Full 162-zone current fire/smoke/collapse snapshot; real timestamp_utc is separate from simulated time; custom CIN payload/typed decoder per SCENARIO.md |
 | MECObservation | event_id, service_id, api_version, operation, deployment_option, correlation_id, result_reference | Retain actual response reference, simulation provenance and mapping version; no guessed MEC response schema |
 
 Do not place all correlation keys on unrelated messages as dummy values. Preserve meaningful links: sensor event → route → command → device ACK; MEC requests/results use their own operation correlation and optional incident reference.
@@ -162,3 +162,11 @@ Actors: bootstrap admin (setup only), individual sensors/displays, controller, r
 Transport credentials remain server-side. Restrict callbacks to known subscription/resource paths and validate event identity/provenance. Do not publish raw resident data, tokens or private network details in evidence.
 
 Record event generation → CSE CIN → notification → compute → route CIN → fan-out → each device application/ACK. E2E_all_acks_ms ends at the latest of three matching device ACK timestamps; incomplete sets are not successful latency samples. Also measure source-runner monotonic event submission → observed third ACK to avoid silently comparing unsynchronized host clocks. TEST_PLAN.md defines sample counts, clock metadata and reporting.
+
+## Standalone analysis interface (Phase 2 local preparation)
+
+python -m mec.risk.worker consumes newline-terminated UTF-8 JSONL ScenarioFrame envelopes from stdin, at most 65,536 bytes per line, one incident beginning at simulation second zero. It reuses the existing Evacuation/Navigation model and assumptions without a CSE/HTTP/MEC client. Optional --assumptions or RISK_ASSUMPTIONS_FILE identifies an explicit validated local assumptions file; missing explicit paths fail rather than falling back.
+
+Each stdout line is an application envelope: schema_version=1, kind=FireRouteRiskResult, processing_state=ACCEPTED/DUPLICATE/REJECTED, result=the existing model snapshot or null, CSE=NOT_CONTACTED and MEC=NOT_CONTACTED. Accepted snapshots retain event/incident/version/source observation UTC, model provenance and private synthetic people. A duplicate has no new result/time. Invalid/missing/oversized/out-of-order/context-changing input emits REJECTED with result=null/guidance_status=UNKNOWN/route=null and terminates nonzero; error text never echoes input/configuration values. Stderr carries the component summary, not a MEC/CSE response. The consumer must stop displaying current results after rejection/stream loss and must preserve observation TTL rather than treating reads/retries as new data.
+
+This worker does not prove source ingestion through CSE; any later adapter must feed verified actual SUB/CIN content and separately retain that evidence. Default local app/Group paths remain unchanged. The analysis Compose profile has no network, credentials, data mounts or listening ports and a read-only filesystem; it is a portable execution artifact, not a MEC App lifecycle claim. Real Hosted APIs, auth/lifecycle and IPE mapping are deferred. Direct MEC calls and IPE-mediated resources retain distinct interfaces and evidence.

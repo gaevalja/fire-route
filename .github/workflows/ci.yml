@@ -24,11 +24,12 @@ jobs:
       - run: node --version
       - run: make test-frontend
       - run: make test-scenario
+      - run: make hazard-preview
       - run: python -m compileall -q backend onem2m simulator mec infra tests
 
   actual-cse:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
         with:
@@ -40,6 +41,7 @@ jobs:
       - run: make p1-dashboard
       - run: make p1-scenario
       - run: make p1-scenario-dashboard
+      - run: make p1-hazards
       - name: Save local development CSE evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -71,6 +73,8 @@ jobs:
             evidence/**/paused-historical-snapshot.json
             evidence/**/before-reset-status.json
             evidence/**/initial-status.json
+            evidence/**/hazard-stages.jsonl
+            evidence/**/hazard-coverage.json
             evidence/**/tests.txt
       - if: always()
         run: make down

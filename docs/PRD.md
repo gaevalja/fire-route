@@ -13,7 +13,7 @@ This hackathon PoC does not guarantee fire detection accuracy, real occupant pos
 - MUST: required for the selected submission baseline; an unavailable environment is reported as a gap, never converted into a PASS.
 - SHOULD: high-value work following the working core.
 - OPTIONAL: selected only with explicit justification, time, infrastructure and acceptance tests.
-- P0–P4 are development phases from ROADMAP.md, not rubric scores or weights. Not all 17 judging rows need implementation, according to the user-provided organizer clarification.
+- Current execution uses Phase 1–4 in ROADMAP.md (local completion, local portability, separately authorized Hosted integration, final submission). P0–P4 labels in the requirement table are historical workstream identifiers, not current execution order or rubric scores. Not all 17 judging rows need implementation, according to the user-provided organizer clarification.
 
 ## 3. Functional requirements
 
@@ -34,7 +34,7 @@ Existing F01–F19 identifiers are retained for traceability.
 | F11 | SHOULD / P3 | Device oneM2M MQTT and app HTTP(S), with protocol rationale | Actual request/response bindings produce CSE resources |
 | F12 | MUST / P3, baseline P1 | Separate least-privilege ACP, role authorization and deployment transport security | Authorized actions succeed; forbidden CSE writes and responder reads are denied |
 | F13 | SHOULD / P3 | Discover resources via labels; add FCNT if supported | Actual discovery results; FCNT definition/read-back when claimed |
-| F14 | MUST / P2 | Deploy selected official MEC topology and use a non-location MEC service through oneM2M interworking | Deployment identity and service → IPE → CSE → consumer trace |
+| F14 | CONDITIONAL / current Phase 3 (historical P2) | After separate instruction, verify a supported Hosted/official MEC topology and service; distinguish direct API from supported IPE-mediated interworking | Deployment identity and service → IPE → CSE → consumer trace |
 | F15 | SHOULD / P3 | Report measured p50/p95 with sample count and defined clock boundary | Reproducible calculation from real hop logs |
 | F16 | OPTIONAL | Controlled CSE handover | Actual dual-CSE outage/loss/restoration measurement |
 | F17 | OPTIONAL | MEC network location/geofencing | Supported real API trace; synthetic indoor coordinates never count |
@@ -42,12 +42,12 @@ Existing F01–F19 identifiers are retained for traceability.
 | F19 | OPTIONAL | Diagnostic AI/MCP or TR-0084 FL | Separate genuine implementation/tests; no AI control of route safety |
 | F20 | MUST / P1 | Ingest typed synthetic temperature and smoke/fire observations | Correct units/provenance, validation and CSE read-back; smoke drives initial hazard policy |
 | F21 | MUST / P1 | Show synthetic remaining-occupant scenario information to responders | Timestamped synthetic count/zone records; resident access denied; unknown is not zero |
-| F22 | MUST target / P2 | Option C: MN-CSE as MEC App on MEC Host, with explicit Cloud IN-CSE registrar relation | Lifecycle/placement record, CSE registration evidence and acquired-guide conformance review |
+| F22 | CONDITIONAL / current Phase 3 (historical P2) | Assess actual Option C support (MN-CSE as MEC App and registrar relationship); select only a supported official topology | Lifecycle/placement record, CSE registration evidence and acquired-guide conformance review |
 | F23 | MUST / P0–P4 | Independent local modules, PR integration and reproducible setup | Clean-clone setup and tests; shared deployment tied to a reviewed commit |
 | F24 | MUST / P1 | Integrate the user-selected fire_evac scenario unchanged, with seeded wind/time/collapse semantics and all 162 zones | Source/engine T22; actual atomic frame/CSE/SUB T23; agreed movement policy, route/Group/ACK/role views T24 |
 | F25 | MUST / P1 | Provide both fixed-origin guidance and seeded moving synthetic residents on the same hazard state, with explicitly assumed geometry/population | Analytic movement/queue/conservation tests T25; protected actual HTTP/CSE selected-profile views T26; no real-person or calibrated safety claim |
 
-If F22 cannot run, retain the selected-baseline gap and record a justified official fallback (first assess Option B). Never report Option B or a standalone CSE as Option C. A documented fallback is a scoped result, not completion of the original topology.
+If F22 cannot run, record the actual limitation and assess Option A/B or another officially supported topology against acquired guides and real permissions. Never report Option B or a standalone CSE as Option C. A documented fallback is a scoped result, not completion of the original topology.
 
 ## 4. Non-functional requirements
 
@@ -71,3 +71,7 @@ The existing three-floor regression story remains: baseline EXIT_A, F2_A smoke �
 No fire certification, live emergency advice, real-person tracking, emergency-service dispatch, physical building interlocks or guaranteed real-time deadlines. Optional handover/location/FL/AI work may be omitted.
 
 By 2026-11-20 deliver the functioning selected scope, source repository, article, video, presentation and sanitized evidence. Remaining gaps must be visible in STATUS.md and submission materials. See ROADMAP.md, TEST_PLAN.md and DEMO.md.
+
+## Current strategy acceptance additions (2026-11-14)
+
+Phase 1 must remain independent of Hosted access: preserve actual local CSE behavior, verify shutdown cause/key/persistence, distinguish intentional missing-device tests from service failures, and retain safe handling of malformed/duplicate/stale observations. Phase 2 prepares a reusable standalone risk/route component, external local/Hosted settings and image/interfaces with no Hosted connection. Phase 3 is separately gated; user-described namespace/login details are unverified. Phase 4 submits working local artifacts even if MEC remains incomplete. No inactive template, unit mock or container running outside verified MEC lifecycle counts as F14/F22 completion.
