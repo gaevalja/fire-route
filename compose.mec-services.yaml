@@ -1,0 +1,196 @@
+# Separate project: official controller/enablement + external FireRoute service/IPE.
+name: fire-route-mec-services
+services:
+  mec-redis:
+    extends: {file: compose.mec-runtime.yaml, service: mec-redis}
+  mec-cse:
+    extends: {file: compose.mec-local.yaml, service: mec-cse}
+  mec-platform:
+    extends: {file: compose.mec-runtime.yaml, service: mec-platform}
+    ports: !override ["127.0.0.1:${MEC_SERVICES_PORT:-8091}:80"]
+    depends_on:
+      mec-controller: {condition: service_healthy}
+  mec-couch:
+    build:
+      context: .
+      dockerfile: infra/mec/couch.Dockerfile
+    env_file: [.runtime/mec-couch.env]
+    networks:
+      mec:
+        aliases: [meep-couchdb-svc-couchdb.default.svc.cluster.local]
+    volumes:
+      - mec-couch-data:/opt/couchdb/data
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/fire-route-couch-health"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+  mec-influx:
+    image: influxdb:1.8.10
+    networks:
+      mec:
+        aliases: [meep-influxdb.default.svc.cluster.local]
+    volumes: [mec-influx-data:/var/lib/influxdb]
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8086/ping"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+  mec-controller:
+    init: true
+    build:
+      context: .
+      dockerfile: infra/mec/controller.Dockerfile
+      additional_contexts:
+        etsi_source: ./.runtime/mec-sandbox/services-build/source
+    env_file: [.runtime/mec-couch.env]
+    environment: {MEEP_SANDBOX_NAME: fire-route-local}
+    networks: [mec]
+    depends_on:
+      mec-redis: {condition: service_healthy}
+      mec-couch: {condition: service_healthy}
+      mec-influx: {condition: service_healthy}
+    volumes: [./infra/mec/service_health.py:/opt/service_health.py:ro]
+    healthcheck:
+      test: ["CMD", "python", "/opt/service_health.py", "controller"]
+      interval: 3s
+      timeout: 5s
+      retries: 50
+  mec-risk:
+    init: true
+    build: {context: ., dockerfile: infra/core.Dockerfile, args: {WITH_POLICY_COMPARISON: "1"}}
+    entrypoint: ["python", "-m", "mec.risk.service"]
+    env_file: [.runtime/mec-risk.env]
+    environment: {EVIDENCE_ROOT: /app/evidence, FIREROUTE_POLICY_COMPARISON: "1"}
+    depends_on:
+      mec-platform: {condition: service_healthy}
+    networks: [mec]
+    volumes:
+      - mec-risk-state:/state
+      - ./evidence:/app/evidence
+    healthcheck:
+      test: ["CMD", "python", "-m", "infra.mec.service_health", "risk"]
+      interval: 3s
+      timeout: 5s
+      retries: 50
+  # Second registered MEC service: access-event occupancy estimate (synthetic input only).
+  mec-occupancy:
+    init: true
+    build: {context: ., dockerfile: infra/core.Dockerfile}
+    entrypoint: ["python", "-m", "mec.occupancy.service"]
+    env_file: [.runtime/mec-risk.env]
+    environment: {EVIDENCE_ROOT: /app/evidence}
+    depends_on:
+      mec-platform: {condition: service_healthy}
+    networks: [mec]
+    volumes:
+      - mec-occupancy-state:/state
+      - ./evidence:/app/evidence
+    healthcheck:
+      test: ["CMD", "python", "-m", "infra.mec.service_health", "occupancy"]
+      interval: 3s
+      timeout: 5s
+      retries: 50
+  mec-ipe:
+    init: true
+    stop_grace_period: 30s
+    build: {context: ., dockerfile: infra/core.Dockerfile}
+    entrypoint: ["python", "-m", "mec.interworking.worker"]
+    env_file: [.runtime/mec-risk.env]
+    environment: {EVIDENCE_ROOT: /app/evidence}
+    depends_on:
+      mec-cse: {condition: service_healthy}
+      mec-risk: {condition: service_healthy}
+      mec-occupancy: {condition: service_healthy}
+    networks: [mec, backend]
+    volumes:
+      - mec-ipe-state:/state
+      - ./evidence:/app/evidence
+    healthcheck:
+      test: ["CMD", "python", "-m", "infra.mec.service_health", "ipe"]
+      interval: 3s
+      timeout: 5s
+      retries: 50
+  mec-services-check:
+    build: {context: ., dockerfile: infra/core.Dockerfile, args: {WITH_POLICY_COMPARISON: "1"}}
+    entrypoint: ["python", "-m", "mec.services_check"]
+    environment:
+      EVIDENCE_ROOT: /app/evidence
+      SCENARIO_TRACE: /traces/fire-evac-mec.jsonl
+      FIREROUTE_POLICY_COMPARISON: "1"
+    networks: [mec, backend]
+    depends_on:
+      mec-ipe: {condition: service_healthy}
+    volumes:
+      - mec-ipe-state:/ipe-state:ro
+      - ./.runtime/fire-evac-mec.jsonl:/traces/fire-evac-mec.jsonl:ro
+      - ./evidence:/app/evidence
+  mec-dashboard:
+    profiles: [mec-dashboard]
+    init: true
+    stop_grace_period: 30s
+    build: {context: ., dockerfile: infra/core.Dockerfile, args: {WITH_POLICY_COMPARISON: "1"}}
+    entrypoint: ["python", "-m", "mec.dashboard"]
+    depends_on:
+      mec-ipe: {condition: service_healthy}
+    environment:
+      CSE_BASE_URL: http://mec-cse:8080
+      CSE_BASE_RESOURCE: fire-route-dev
+      CSE_ORIGINATOR: CAdmin
+      CSE_RELEASE: "4"
+      NOTIFICATION_PUBLIC_URL: http://mec-dashboard:8000/onem2m/notify
+      NOTIFICATION_BIND_HOST: 0.0.0.0
+      SCENARIO_TRACE: /traces/fire-evac-mec-demo.jsonl
+      FIREROUTE_POLICY_COMPARISON: "1"
+      FIRE_EVAC_RUNS_DIR: /run/fire-route/model-replay-runs
+      EVIDENCE_ROOT: /app/evidence
+      APP_AUTH_FILE: /run/fire-route/auth.json
+      APP_PUBLIC_ORIGIN: http://127.0.0.1:${MEC_DASHBOARD_PORT:-3002}
+      APP_BIND_HOST: 0.0.0.0
+      APP_PORT: "3000"
+    networks: [backend, edge]
+    ports: ["127.0.0.1:${MEC_DASHBOARD_PORT:-3002}:3000"]
+    volumes:
+      - mec-ipe-state:/ipe-state:ro
+      - ./.runtime/auth.json:/run/fire-route/auth.json:ro
+      - ./.runtime/fire-evac-mec-demo.jsonl:/traces/fire-evac-mec-demo.jsonl:ro
+      - type: bind
+        source: "${FIRE_EVAC_RUNS_DIR:-./simulator/fire_policy/assets}"
+        target: /run/fire-route/model-replay-runs
+        read_only: true
+        bind: {create_host_path: false}
+      - ./evidence:/app/evidence
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/healthz', timeout=2).close()"]
+      interval: 3s
+      timeout: 4s
+      retries: 40
+  mec-dashboard-check:
+    profiles: [mec-dashboard-check]
+    build: {context: ., dockerfile: infra/core.Dockerfile}
+    entrypoint: ["python", "-m", "tests.integration.selected_dashboard_check"]
+    depends_on:
+      mec-dashboard: {condition: service_healthy}
+    networks: [backend]
+    environment:
+      DASHBOARD_URL: http://mec-dashboard:3000
+      APP_PUBLIC_ORIGIN: http://127.0.0.1:${MEC_DASHBOARD_PORT:-3002}
+      ACCESS_CODES_FILE: /run/fire-route/access-codes.json
+      EVIDENCE_ROOT: /app/evidence
+      REQUIRE_MEC_RESULT: "1"
+    volumes:
+      - ./.runtime/access-codes.json:/run/fire-route/access-codes.json:ro
+      - ./evidence:/app/evidence
+networks:
+  mec: {internal: true}
+  backend: {internal: true}
+  edge: {}
+volumes:
+  mec-redis-data:
+  mec-data:
+  mec-metadata:
+  mec-couch-data:
+  mec-influx-data:
+  mec-risk-state:
+  mec-occupancy-state:
+  mec-ipe-state:

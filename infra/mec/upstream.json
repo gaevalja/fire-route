@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "repository": "https://labs.etsi.org/rep/mec/etsi-mec-sandbox.git",
+  "branch": "STF_685",
+  "commit": "8c66f08e443be174f109fe2ac645247c9afcd449",
+  "tree": "aded204ff049309bd0c0bfea711c5bd290dc2615",
+  "component": "go-apps/meep-app-enablement",
+  "API": "MEC011 Service Management v1 / Application Support v2",
+  "OpenAPI_version": "3.1.1",
+  "builder_image": "golang:1.25.0-bookworm",
+  "redis_image": "redis:6.2.24-bookworm",
+  "deployment": "LOCAL_COMPOSE_OFFICIAL_COMPONENT_NOT_FULL_SANDBOX_OR_OPTION_C"
+}

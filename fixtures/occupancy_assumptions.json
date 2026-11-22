@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "model_id": "fire-route-access-occupancy-v1",
+  "provenance": "ASSUMED_NOT_CALIBRATED",
+  "checkpoint_coverage": "ALL_ZONE_BOUNDARIES",
+  "miss_probability": 0.05,
+  "prior": "REGISTERED_PEOPLE_PER_ROOM",
+  "presence_coverage": "ALL_LINKED_ZONES",
+  "presence_scan_interval_seconds": 10,
+  "device_carry_probability": 0.9,
+  "device_detection_probability": 0.9,
+  "false_detection_probability": 0.02,
+  "presence_scan_window": 3,
+  "access_occupied_prior": 0.8,
+  "access_empty_prior": 0.05,
+  "high_probability": 0.7,
+  "possible_probability": 0.4
+}

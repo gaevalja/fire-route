@@ -3,6 +3,8 @@ FROM ${PYTHON_IMAGE}
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY infra/cse/requirements.txt /opt/cse-requirements.txt
 RUN python -m pip install --no-cache-dir -r /opt/cse-requirements.txt
+COPY infra/cse/patch_shutdown.py /opt/fire-route/patch_shutdown.py
+RUN python /opt/fire-route/patch_shutdown.py
 COPY infra/cse/acme.ini /etc/fire-route/acme.ini
 COPY infra/cse/entrypoint.py infra/cse/healthcheck.py /opt/fire-route/
 WORKDIR /data

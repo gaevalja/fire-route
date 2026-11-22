@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1424">
+  <title data-en="Evacuation Policy Comparison · FIRE EVAC">대피 정책 비교 · FIRE EVAC</title>
+  <link rel="stylesheet" href="replay.css">
+  <script src="../locale.js" defer></script>
+  <script src="../../../simulator/scenarios/fire_evac/config.js" defer></script>
+  <script src="../../../simulator/scenarios/fire_evac/engine.js" defer></script>
+  <script src="offline_replay.js" defer></script>
+  <script src="replay.js" defer></script>
+</head>
+<body>
+  <div class="page">
+    <header class="masthead">
+      <div class="brand-icon" aria-hidden="true">↗</div>
+      <div class="brand-copy">
+        <p class="eyebrow">FIRE EVAC</p>
+        <h1 data-en="Evacuation Policy Comparison">대피 정책 비교</h1>
+        <p id="page-description" data-en="Replay Dijkstra and PPO against the same fire and evacuation rules.">같은 화재와 대피 규칙에서 다익스트라와 PPO를 재생합니다.</p>
+      </div>
+      <a class="maker-link" href="../../../simulator/scenarios/fire_evac/index.html" target="_blank" rel="noopener" data-en="Scenario Maker ↗">시나리오 메이커 ↗</a>
+    </header>
+
+    <div id="notice" class="notice" role="status" aria-live="polite" data-en="Checking saved models.">저장된 모델을 확인하는 중입니다.</div>
+
+    <main class="layout">
+      <aside class="control-panel panel">
+        <div class="panel-heading"><h2 data-en="Scenario Settings">시나리오 설정</h2></div>
+        <label id="mode-field" class="field"><span data-en="Mode">보기</span><select id="replay-mode"><option value="compare" data-en="Paired comparison">동일 조건 비교</option><option value="ppo" data-en="Saved PPO model review">저장 PPO 모델 검토</option></select></label>
+        <div id="comparison-settings">
+          <p class="field-hint" data-en="Comparison model · FIRE_EVAC_0015">비교 모델 · FIRE_EVAC_0015</p>
+          <p id="comparison-rules" class="field-hint" data-en="Both policies share the ignition room, starting room, awareness delay, travel times and outcome rules.">두 정책에 같은 발화 방, 시작 방, 인지 지연, 이동 시간과 구조·사망 규칙을 적용합니다.</p>
+        </div>
+        <div id="ppo-run-options" hidden>
+        <div id="offline-import" class="offline-import" hidden>
+          <strong data-en="Load saved models">저장된 모델 불러오기</strong>
+          <p data-en="Select the runs folder to load models and training logs in this browser.">runs 폴더를 선택하면 모델과 학습 기록을 브라우저에서 읽습니다.</p>
+          <label class="import-button"><span data-en="Select runs folder">runs 폴더 선택</span><input id="run-folder-input" type="file" webkitdirectory directory multiple></label>
+          <label class="import-button secondary"><span data-en="Select model file only">모델 파일만 선택</span><input id="policy-file-input" type="file" accept=".json,application/json" multiple></label>
+          <p data-en="Select browser_policy.json to load an individual model.">모델 파일은 browser_policy.json입니다. 브라우저가 폴더 선택을 지원하지 않으면 아래 버튼을 사용하세요.</p>
+        </div>
+        <label class="field">
+          <span data-en="Training run">학습 실행</span>
+          <select id="run-select" aria-label="학습 실행" data-en-aria-label="Training run"><option value="" data-en="Loading…">불러오는 중…</option></select>
+        </label>
+        <p id="model-caption" class="field-hint" data-en="View training loss and replay the final model after training.">학습 중에는 손실을 보고, 완료 후 최종 모델을 재생합니다.</p>
+        <button id="refresh-button" class="refresh-button" type="button" data-en="Refresh models and training logs">모델·학습 기록 새로 고침</button>
+        </div>
+        <label class="field"><span data-en="Test wind speed">테스트 풍속</span>
+          <select id="wind-select">
+            <option value="1">1 m/s</option><option value="5" selected>5 m/s</option>
+            <option value="10">10 m/s</option><option value="15">15 m/s</option>
+          </select>
+        </label>
+        <label class="field"><span data-en="Scenario seed">시나리오 번호</span><input id="seed-input" type="number" min="1" max="4294967295" step="1" value="2026"></label>
+        <label class="field"><span data-en="Initial ignition room">최초 발화 방</span><select id="ignition-select"><option value="" data-en="Random from seed">시드에 따라 무작위</option></select></label>
+        <label class="field"><span data-en="Starting room">대피자 시작 방</span><select id="start-select"><option value="" data-en="Random from seed">시드에 따라 무작위</option></select></label>
+        <button id="generate-button" class="primary-button" type="button" disabled data-en="Generate comparison">비교 재생 만들기</button>
+        <div class="divider"></div>
+        <div class="panel-heading small"><h2 data-en="Playback">재생</h2></div>
+        <div class="play-row">
+          <button id="back-button" type="button" aria-label="이전 장면" data-en-aria-label="Previous frame" disabled>‹</button>
+          <button id="play-button" class="play-main" type="button" disabled data-en="▶ Play">▶ 재생</button>
+          <button id="next-button" type="button" aria-label="다음 장면" data-en-aria-label="Next frame" disabled>›</button>
+        </div>
+        <label class="field compact"><span data-en="Playback speed">재생 속도</span><select id="speed-select"><option value="1200" data-en="Slow">느리게</option><option value="550" selected data-en="Normal">보통</option><option value="180" data-en="Fast">빠르게</option></select></label>
+        <label class="check-row"><input id="follow-agent" type="checkbox" checked><span data-en="Follow the evacuee&#x27;s floor">대피자가 있는 층 따라가기</span></label>
+        <label id="follow-policy-field" class="field compact"><span data-en="Track to follow">따라갈 대피자</span><select id="follow-policy"><option value="dijkstra" data-en="Dijkstra">다익스트라</option><option value="ppo">PPO</option></select></label>
+      </aside>
+
+      <section class="center-column">
+        <section class="summary-grid" aria-label="재생 요약" data-en-aria-label="Replay summary">
+          <div class="summary-card panel"><span data-en="Elapsed time">경과 시간</span><strong id="time-value">--:--</strong><small id="time-total">/ --:--</small></div>
+          <div class="summary-card panel"><span id="agent-label" data-en="Shared starting room">공통 시작 방</span><strong id="agent-value" data-en="Waiting">대기 중</strong><small id="start-value" data-en="Starting room pending">시작 방 선택 전</small></div>
+          <div class="summary-card panel"><span data-en="Ignition room">발화 방</span><strong id="ignition-value">—</strong><small id="wind-value" data-en="Wind —">풍속 —</small></div>
+          <div class="summary-card panel"><span data-en="Outcome">결과</span><strong id="outcome-value">—</strong><small id="outcome-detail" data-en="Generate a replay">재생을 만들어 주세요</small></div>
+        </section>
+
+        <section id="comparison-results" class="comparison-results" aria-label="정책별 결과" data-en-aria-label="Policy outcomes">
+          <article class="comparison-result panel dijkstra">
+            <h2 data-en="Dijkstra">다익스트라</h2><p id="dijkstra-description" data-en="Recalculates an exit route based on current hazards.">위험도를 반영해 출구까지의 경로를 다시 계산합니다.</p>
+            <p class="policy-outcome" id="dijkstra-outcome">—</p>
+            <p id="dijkstra-actions">—</p>
+            <strong id="dijkstra-position">—</strong>
+            <p id="dijkstra-action">—</p>
+            <button type="button" data-jump-policy="dijkstra" disabled data-en="Show Dijkstra location">다익스트라 위치 보기</button>
+            <details><summary data-en="Taken path">이동 경로</summary><p id="dijkstra-path">—</p></details>
+          </article>
+          <article class="comparison-result panel ppo">
+            <h2>PPO</h2><p data-en="Observes current hazards and chooses to move or wait.">현재 위험을 관찰해 이동하거나 대기합니다.</p>
+            <p class="policy-outcome" id="ppo-outcome">—</p>
+            <p id="ppo-actions">—</p>
+            <strong id="ppo-position">—</strong>
+            <p id="ppo-action">—</p>
+            <button type="button" data-jump-policy="ppo" disabled data-en="Show PPO location">PPO 위치 보기</button>
+            <details><summary data-en="Taken path">이동 경로</summary><p id="ppo-path">—</p></details>
+          </article>
+        </section>
+
+        <section class="plan-panel panel">
+          <div class="plan-heading">
+            <div><h2 id="floor-title" data-en="Floor 2 plan">2층 평면도</h2><p data-en="Each zone shows fire, smoke and collapse status.">구역마다 불·연기 수치와 붕괴 여부를 표시합니다.</p></div>
+            <div class="floor-shortcuts"><button id="jump-agent" type="button" disabled data-en="Show evacuee location">대피자 위치 보기</button></div>
+          </div>
+          <div id="floor-tabs" class="floor-tabs" role="group" aria-label="층 선택" data-en-aria-label="Select floor"></div>
+          <div class="plan-scroll"><div id="floorplan" class="floorplan" aria-live="polite"></div></div>
+          <div class="legend"><span id="single-legend" hidden><i class="legend-dot agent"></i><span data-en="Evacuee">대피자</span></span><span id="dijkstra-legend"><i class="legend-dot dijkstra"></i><span data-en="D · Dijkstra">D · 다익스트라</span></span><span id="ppo-legend"><i class="legend-dot agent"></i>P · PPO</span><span><i class="legend-dot fire"></i><span data-en="Fire">불</span></span><span><i class="legend-dot smoke"></i><span data-en="Smoke">연기</span></span><span><i class="legend-dot collapse"></i><span data-en="Collapse">붕괴</span></span></div>
+          <div class="timeline">
+            <input id="timeline-range" type="range" min="0" max="0" value="0" aria-label="재생 위치" data-en-aria-label="Playback position" disabled>
+            <div class="timeline-labels"><span id="timeline-current">00:00</span><span id="timeline-end">00:00</span></div>
+          </div>
+        </section>
+
+        <section id="charts-panel" class="charts-panel panel" hidden>
+          <div class="chart-heading"><div><h2 data-en="Training Loss">손실 변화</h2><p data-en="Training metrics for the selected PPO model.">선택한 PPO 모델의 학습 기록입니다.</p></div>
+            <select id="loss-select" aria-label="표시할 학습 지표" data-en-aria-label="Training metric">
+              <option value="total_loss" data-en="Total loss">전체 손실</option><option value="policy_loss" data-en="Policy loss">정책 손실</option>
+              <option value="value_loss" data-en="Value loss">가치 손실</option><option value="entropy" data-en="Entropy">엔트로피</option>
+            </select>
+          </div>
+          <div class="chart-box"><canvas id="loss-chart" aria-label="학습 손실 그래프" data-en-aria-label="Training loss chart" role="img"></canvas></div>
+          <div class="chart-meta"><span id="loss-readout" data-en="Loading training logs.">기록을 불러오는 중입니다.</span><span id="eval-readout"></span></div>
+        </section>
+      </section>
+
+      <aside class="detail-column">
+        <section class="detail-panel panel">
+          <div class="panel-heading"><h2 id="detail-heading" data-en="Zone Hazards">구역 위험도</h2></div>
+          <div id="single-details" hidden>
+          <div class="detail-block"><span data-en="Action">행동</span><strong id="action-value">—</strong></div>
+          <div class="detail-block"><span data-en="Current location hazards">위치 위험도</span><strong id="risk-value">—</strong></div>
+          <div class="detail-block"><span data-en="Action reward">이번 행동 보상</span><strong id="reward-value">—</strong></div>
+          </div>
+          <div class="detail-block"><span data-en="Selected zone">선택한 구역</span><strong id="selected-value" data-en="Select a zone on the floor plan">평면도의 구역을 선택하세요</strong><p id="selected-detail" data-en="Inspect its fire and smoke indices.">불과 연기 수치를 자세히 볼 수 있습니다.</p></div>
+        </section>
+        <section class="log-panel panel">
+          <div class="panel-heading"><h2 data-en="Actions and Events">행동과 사건</h2></div>
+          <div id="event-list" class="event-list"><p class="empty" data-en="Generate a replay to see events.">재생을 만들면 기록이 표시됩니다.</p></div>
+        </section>
+      </aside>
+    </main>
+    <footer data-en="Fire and smoke values are relative hazard indices.">불·연기 수치는 시나리오의 상대 위험도 지표입니다.</footer>
+  </div>
+</body>
+</html>

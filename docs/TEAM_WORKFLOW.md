@@ -43,7 +43,7 @@ Local CSE resources are developer/run scoped. Shared integration uses a serializ
 
 - Merge P0 contracts/client/runtime first; risk, scenario and UI work may proceed independently against the agreed interface.
 - Integrate sensor → notification → controller → route before Group/ACK/live views. P1 requires the complete live loop, including all three displays and baseline permissions.
-- MEC source/host investigation starts beside P0; P2 deploys against the pinned P1 artifact. Preserve a working CSE-only demo during permitted integration changes.
+- Current Phases 1/2 preserve local CSE operation while preparing portable modules/configuration and reviewing public guides. Hosted access/namespace/API/deployment work begins only under a separate Phase 3 instruction. Preserve the working local demo throughout any later permitted integration.
 - P3 adds full transport/security/discovery/fault/latency evidence. P4 publication begins as an outline on day one and uses verified facts only.
 - Every merged feature updates its STATUS row and links actual evidence; the integration owner reconciles concurrent ledger changes. Resolve conflicts by preserving both workstreams' results.
 

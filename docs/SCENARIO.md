@@ -1,10 +1,20 @@
 # Selected FireRoute scenario: fire_evac
 
+The active profile is `fire_evac_10f_0015`. Its engine and configuration match
+the FIRE_EVAC_0015 source snapshot byte for byte. The selected scenario retains
+the 162 zones and adds the 0015 rooftop smoke cap of 30, local fire-growth
+acceleration and non-ignition room resistance. Generate a fresh trace for the
+active bundle. Historical evidence in this document refers to the recorded
+source version and hash. For the hazard regression, seed 59 at 5 m/s produces
+an alternate route at 428 seconds, isolation at 695 seconds and a natural
+collapse at 1,740 seconds on the 0015 engine. The test replays up to 1,800
+seconds. Everyday scenarios use their generated collapse result.
+
 ## Authority and implementation boundary
 
 On 2026-11-12 the user selected `C:\Users\lilkid\Downloads\fire_evac` as the scenario source. Its README, configuration, engine, UI and tests were inspected. The seven original files are preserved byte-for-byte under `simulator/scenarios/fire_evac/`; `manifest.json` records SHA-256 hashes. That repository snapshot makes the source reproducible without access to a developer's Downloads directory. External originals are unchanged. The supplied folder has no license declaration; retain its provenance and resolve publication attribution in P4.
 
-This is the selected submission scenario. The existing `fixtures/building_3f.json`, three-floor dashboard and actual T05/routes/Group/dashboard evidence remain regression checkpoints. New source-frame/controller/CSE runners and a separate ten-floor role dashboard are implemented but require actual runtime verification. The user's latest direction is to implement both modes and choose missing dimensions/population assumptions; EVACUATION_MODEL.md defines that added layer. No MEC service is connected. Opening the supplied standalone index.html still runs the original local maker, not the CSE dashboard.
+This is the selected submission scenario. The existing `fixtures/building_3f.json`, three-floor dashboard and actual T05/routes/Group/dashboard evidence remain regression checkpoints. The selected source-frame/controller/CSE core and role HTTP baseline gates have passed. The natural-hazard actual CSE/core extension has also passed, while comprehensive browser/fault checks remain open. The user's latest direction is to implement both modes and choose missing dimensions/population assumptions; EVACUATION_MODEL.md defines that added layer. No MEC service is connected. Opening the supplied standalone index.html still runs the original local maker, not the CSE dashboard.
 
 ## Rules taken from the source
 
@@ -48,7 +58,7 @@ No Node runtime is installed in the Python image. Host Node 24.22.1 (.node-versi
 
 - The user authorized assumptions because no actual dimensions/population were supplied. The separate evacuation layer uses two people per room (170), seeded individual speeds/departure delays, one-second movement and finite shared link capacities. Fixed guidance defaults to F7-R3; fixed queries never move the population. These defaults are editable in fixtures/evacuation_assumptions.json.
 - The added movement graph connects the two source entrance markers to F1-L as EXIT_A/EXIT_B. It has 164 nodes (162 hazard zones plus two external exits), isolated elevators and a roof that is not an exit. This is a project assumption, not a modified source transport graph.
-- Geometry, travel costs, heuristic smoke slowdown, and fire>=55/smoke>=70/collapse blocking are uncalibrated demo policy. No measured visibility/toxic dose, accessibility guarantee, assisted rescue or injury/death outcome is implemented. See EVACUATION_MODEL.md for conservation, queuing and in-transit blockage semantics.
+- Geometry, travel costs, heuristic smoke slowdown, and fire>=45/smoke>=60/collapse blocking (ADR-031) are uncalibrated demo policy. No measured visibility/toxic dose, accessibility guarantee, assisted rescue or injury/death outcome is implemented. See EVACUATION_MODEL.md for conservation, queuing and in-transit blockage semantics.
 - Collapse does not imply that occupants disappear, become zero or are rescued. The engine has no human simulation or reinforcement-learning rewards.
 - Fire index cannot be converted to degrees Celsius. Typed temperature samples, if retained, need their own labeled generator/device source.
 - The engine has no oneM2M, MEC, routing, Group, ACK or role security integration. Each hop needs its own real evidence.
@@ -59,7 +69,7 @@ No Node runtime is installed in the Python image. Host Node 24.22.1 (.node-versi
 |---|---|---|
 | T22 source/engine | Seven hashes match source; original four test groups execute; seed/wind/topology/direction/caps/time/end checked | Imported; executed source checks PASS, exact output in STATUS |
 | T23 frame/CSE | Actual 162-zone CIN read-back and SUB; no future-state exposure; ordering/clock/provenance | Actual core baseline PASS for 181 frames; negative ordering subcases have unit coverage; broader live fault coverage remains pending |
-| T24 integrated scenario | Declared movement/exit policy, alternatives/collapse exclusion/no-route, Group/ACK and role views | Actual selected core and HTTP baseline PASS; manual 208-second run audited; full hazard-driven alternative/collapse/no-route/fault and browser QA remain incomplete |
+| T24 integrated scenario | Declared movement/exit policy, alternatives/collapse exclusion/no-route, Group/ACK and role views | Actual core, HTTP baseline and natural-hazard core PASS: blocked-original-path alternative, collapsed-node exclusion, no-route and stopped-display incomplete ACKs verified; full restart/fault and hazard browser QA remain incomplete |
 
 T05/routes/Group/dashboard remain regression commands for the three-floor checkpoint. T22 is an engine-level test and cannot pass T23/T24, MEC deployment or actual evacuation claims.
 

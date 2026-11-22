@@ -6,7 +6,7 @@ const crypto=require('node:crypto');
 const {parseArgs}=require('node:util');
 const {values}=parseArgs({options:{seed:{type:'string',default:'2026'},wind:{type:'string',default:'5'},seconds:{type:'string',default:'600'},output:{type:'string',default:'.runtime/fire-evac-trace.jsonl'}}});
 function integer(raw,min,max){const n=Number(raw);if(!/^\d+$/.test(raw)||!Number.isSafeInteger(n)||n<min||n>max)throw new Error('Invalid scenario numeric argument');return n;}
-const seed=integer(values.seed,1,2147483647),wind=integer(values.wind,1,15),seconds=integer(values.seconds,0,12000);
+const seed=integer(values.seed,1,4294967295),wind=integer(values.wind,1,15),seconds=integer(values.seconds,0,12000);
 if(![1,5,10,15].includes(wind))throw new Error('Unsupported wind');
 const source=path.join(__dirname,'scenarios/fire_evac');
 const manifest=JSON.parse(fs.readFileSync(path.join(source,'manifest.json'),'utf8'));

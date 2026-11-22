@@ -8,6 +8,8 @@ The PDF labels Expert 4–5, Proficient 2–3 and Emerging 0–1; no category we
 
 Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 follows from good communication; #8 records genuine public technical participation only. #12/#14/#15/#17 are conditional. Phase names P0–P4 come only from ROADMAP.md.
 
+Current strategy: prioritize verified local operation/security/reproducibility (Phase 1), portable component/configuration preparation locally (Phase 2), separately instructed Hosted integration only (Phase 3), and publication by Nov 20 (Phase 4). MEC deployment/service rows remain conditional and unverified until real authorized evidence exists. Persistent internal key configuration, lifecycle diagnostics and the standalone worker can support security/GitHub/interview preparation but do not themselves establish Expert scores, complete authentication or MEC lifecycle compliance.
+
 ## 2. Criterion-by-criterion plan
 
 ### 1. Innovative use of oneM2M — selected
@@ -26,7 +28,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: actual CSE binding/broker, device request/response handling and protocol-selection rationale.
 - Verify: T08 with matching oneM2M request IDs and CSE CIN read-back for MQTT and HTTP(S).
 - Judge evidence: sanitized binding/connection traces, configuration versions and rationale.
-- Current status: NOT_STARTED / NOT_RUN. Gap: no broker/binding traffic verified; an HTTP-only P1 is not this target.
+- Current status: VERIFIED for the bounded isolated T32 sensor MQTT CREATE/RETRIEVE → actual CSE → HTTP read-back/SUB/ACP slice (nine checks and 13-check wire review). The main selected demo still uses HTTP, broker traffic is private plaintext and full-scenario/multiple-device MQTT remains unverified. No Expert score is claimed.
 
 ### 3. Innovative scenarios — selected
 
@@ -35,7 +37,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: real SUB → compute → route CIN → GRP/fopt → ACK; shared live incident/version.
 - Verify: T01–T07, T15, T18–T20 and integrated scenario.
 - Judge evidence: one correlated run spanning both roles, resource tree and error cases.
-- Current status: VERIFIED for the legacy three-floor backend and role HTTP/CSE slice. P1_GROUP and P1_DASHBOARD prove sensor → notification → computed route CIN → real fan-out → simulated device ACK plus two role-scoped APIs/synthetic occupants, expiry and incomplete delivery. The selected ten-floor source and fixed/moving model pass source/unit/offline verification; selected CSE/core/HTTP/UI code is IMPLEMENTED_UNVERIFIED until its new actual gates/browser QA run. Full recovery and MEC remain open; no final scenario score is claimed.
+- Current status: VERIFIED for the legacy three-floor backend and role HTTP/CSE slice. P1_GROUP and P1_DASHBOARD prove sensor → notification → computed route CIN → real fan-out → simulated device ACK plus two role-scoped APIs/synthetic occupants, expiry and incomplete delivery. The selected ten-floor core and role HTTP/CSE gates pass, including 729-frame hazards/alternative/collapse/no-route/intentional incomplete delivery. Clean efc65cb HTTP/HTTPS browsers each pass 20 assertions and correlate to actual CSE/device runs; sampled Korean text is readable. A recorded hazard story, full application-process/partial-dispatch recovery and MEC remain open; no final scenario score is claimed.
 
 ### 4. Quality of Article — selected
 
@@ -44,7 +46,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: article draft, architecture/resource figures, reproduction steps, hardware/simulator inventory and insights.
 - Verify: P4 reviewer follows clean-clone instructions; every factual claim links an executed result.
 - Judge evidence: final article URL/export, figures and evidence references.
-- Current status: NOT_STARTED / NOT_RUN. Gap: no article or measured implementation insights.
+- Current status: LOCAL_MANUSCRIPT_PREPARED at docs/submission/ARTICLE.md with actual baseline counts, oneM2M benefits, measured insights and the 19-stage worktree/HTTP/HTTPS result. Hackster publication and final link/editorial review remain NOT_RUN.
 
 ### 5. Quality of Video — selected
 
@@ -53,7 +55,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: readable capture, narration/audio, mode labels, captions and real-run backup.
 - Verify: P4 playback review, timestamps matched to real traces, no simulated-success presentation.
 - Judge evidence: submitted video, capture run IDs and storyboard in DEMO.md.
-- Current status: NOT_STARTED / NOT_RUN. Gap: no recorded video; duration/format rules remain to be checked.
+- Current status: CAPTURE_TOOL_AND_SCRIPT_PREPARED; genuine Chrome screencast/optional FFmpeg tools and narration are in the repository. Actual clean HTTP/HTTPS browser checks pass and inspected Korean samples are readable. No actual video/audio/editorial review or publication is claimed; automatic capture covers baseline interaction/expiry, with late hazard/recovery story requiring separate genuine capture or labeled evidence replay.
 
 ### 6. Quality of Github — selected
 
@@ -62,7 +64,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: source, lockfiles, README, setup/test commands, CI, licenses, evidence index and article link.
 - Verify: new environment reproduction from the release commit; link/secret/license review.
 - Judge evidence: public repository/release URL, CI output and reproduction log.
-- Current status: PARTIAL implementation. The user successfully pushed foundation checkpoint 80f6e87 to feature/p0-cse-foundation; subsequent role-dashboard work is local on a stacked feature branch. Actual T05/routes/Group/role HTTP-CSE evidence is recorded. Fresh-clone reproduction, executed CI, release, dashboard publication and article link remain unverified.
+- Current status: published efc65cb passes same-host clean-archive acceptance, all 19 stages including T32/T33/T34, zero unattempted/cleanup 0. A separate 51-check review matches archive/runtime/protocol evidence; curated result and actual readable screenshots are available. Remote GitHub CI/different-machine reproduction/release publication and final article link remain unverified. See LOCAL_ACCEPTANCE.md.
 
 ### 7. Promotion of oneM2M — supporting
 
@@ -71,7 +73,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: explain actual benefits, implementation choices and limitations using the working scenario.
 - Verify: P4 editorial review against protocol evidence; no unsupported compliance statements.
 - Judge evidence: coherent article/video/repository passages and linked live trace.
-- Current status: NOT_STARTED / NOT_RUN. Gap: no completed publication or working benefit demonstration.
+- Current status: LOCAL_ARTICLE_AND_SLIDES_PREPARED: explain actual resource/SUB/Group/ACP benefits and limits. External publication and final presentation remain NOT_RUN; no promotional score is claimed.
 
 ### 8. Judge points — supporting, no manufactured activity
 
@@ -89,7 +91,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: resource walkthrough, methodology/tradeoff notes, role-specific Q&A and rehearsal.
 - Verify: P4 peer interview covers resources, protocols, failure handling, MEC placement, simulation and benefits.
 - Judge evidence: presentation, diagrams and reproducible demo/answers; interview outcome belongs to judges.
-- Current status: NOT_STARTED for rehearsal / NOT_RUN. Actual local CSE/role integration provides concrete material; team explanation, MEC methodology and peer interview still need preparation.
+- Current status: EIGHT_SLIDE_LOCAL_DECK_AND_NARRATION_PREPARED at docs/submission/. Actual team interview/rehearsal is NOT_RUN; the deck distinguishes verified clean-source 19-stage/HTTP/HTTPS scope, remaining publication/submission work and unavailable MEC.
 
 ### 10. Security and Privacy — selected
 
@@ -98,7 +100,9 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: TLS/CA configuration, role credentials, CSE ACPs, backend authorization, secret-safe logs.
 - Verify: T09 and T15; permit intended actions, deny unauthorized writes/reads and identity misuse.
 - Judge evidence: transport configuration/connection proof, ACP read-back and positive/negative outputs.
-- Current status: PARTIAL verified local protection. P1_GROUP proves six scoped CSE denials; P1_DASHBOARD verifies separate role sessions, direct backend denial and actual CSE resident occupant denial. Full CSE-originator authentication/TLS remain unverified and the default-secret warning remains; local HTTP/header identity does not satisfy official Expert secure-protocol requirements.
+- Current status: PARTIAL: actual scoped ACP denials and role API restrictions pass; T27 resolves the observed default-key warning for controlled local restart. T34 now passes eight actual checks with TLS 1.3, trusted CA/hostname, untrusted-CA rejection, role sessions/cookie flags/CSP; HTTPS Chrome also passes 20 checks. This secures browser-to-API transport, while CSE/MQTT actor identities remain header-based/anonymous. Full originator binding/TLS and an Expert award remain unproven.
+
+  T36 now passes all 11 actual isolated gateway/CSE checks, with an 18-check independent HTTP/callback/public-certificate review. It verifies certificate-bound actor requests and native ACP denial for that deployment. The normal demo/MQTT/callback paths are not migrated; full-system authentication and an Expert award are not inferred.
 
 ### 11. Data Interoperability and Discoverability — selected, tiered scope
 
@@ -107,7 +111,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: verify model support; define FCNT specialization and discovery; conditional semantic/SDT model and executed query.
 - Verify: T10 basic/FCNT subcases; separate advanced-model test before any Expert-level claim.
 - Judge evidence: model definition, real resources, discovery/query requests/results and app use.
-- Current status: NOT_STARTED / NOT_RUN. Gap: labels+CIN correspond to Emerging, FCNT+queries to Proficient; neither alone meets the official Expert criterion. Advanced model support/time unverified.
+- Current status: VERIFIED for basic label discovery in actual T32: exactly eight namespace AEs/read-backs and an actual empty negative query. Labels alone are not SDT/SAREF/advanced semantic Expert evidence; FCNT/advanced model remain unimplemented.
 
 ### 12. CSE Handover & Service Continuity — conditional
 
@@ -125,7 +129,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: Local Sandbox access, acquired guide, app artifact/lifecycle, MN-to-IN registration, placement evidence; additional multi-host orchestration only if supported.
 - Verify: T16/T17 plus deployment review; verify what is a container, VM, external app or emulated platform.
 - Judge evidence: pinned deployment procedure, host/app identities, topology, lifecycle logs and registration read-back.
-- Current status: NOT_STARTED / NOT_RUN. Gap: no Sandbox/CSE deployment. Deploying/registering an app/CSE/VM with documentation is the Proficient description; Option C on one host does not itself prove Expert orchestration.
+- Current status: Official local MEC011 component/Redis plus dedicated actual CSE now build/start and pass the seven-check catalog bridge. This is bounded component packaging, not manager-controlled application/VM placement or Option C. Actual FireRoute app registration/placement and cross-host orchestration remain NOT_RUN. Deploying/registering an app/CSE/VM with documentation is the Proficient description; Option C on one host does not itself prove Expert orchestration.
 
 ### 14. Federated Learning (TR-0084) — conditional
 
@@ -152,7 +156,7 @@ Selected high priorities: #1, #2, #3, #10, #11, #13, #16, #6, #4, #5 and #9. #7 
 - Work: actual catalog/OpenAPI inventory, official compatible IPE/mapping, correlated observation/request/result resources; no invented write operations.
 - Verify: T11; separate direction/service traces for any expanded Expert-level claim.
 - Judge evidence: discovery/configuration calls, MEC responses/notifications, CSE resources and consuming application's reaction.
-- Current status: NOT_STARTED / NOT_RUN. Gap: direct MEC calls are Emerging; one non-location service through oneM2M is Proficient; multiple services and bidirectionality are unverified.
+- Current status: VERIFIED for bounded actual local MEC011 discovery and application-AE catalog storage/read-back/SUB/ACP at 20261116-114543Z-372e392f, seven checks. The official component's real catalog is empty. Useful FireRoute service consumption, standardized MEC-IPE, multiple-service configuration and bidirectional interactions remain unverified. This does not establish the Expert criterion or application placement; no score is claimed.
 
 ### 17. AI Agents & MCP Integration — conditional
 

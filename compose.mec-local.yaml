@@ -1,0 +1,45 @@
+# Integration client + actual CSE only; install the official local MEC separately.
+name: fire-route-mec-local
+services:
+  mec-cse:
+    init: true
+    stop_signal: SIGINT
+    stop_grace_period: 30s
+    build:
+      context: .
+      dockerfile: infra/cse/Dockerfile
+    networks: [backend]
+    volumes:
+      - mec-data:/data
+      - mec-metadata:/metadata
+    healthcheck:
+      test: ["CMD", "python", "/opt/fire-route/healthcheck.py"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+  mec-check:
+    build:
+      context: .
+      dockerfile: infra/core.Dockerfile
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    entrypoint: ["python", "-m", "mec.local_integration"]
+    depends_on:
+      mec-cse: {condition: service_healthy}
+    networks: [backend, edge]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      MEC_LOCAL_SERVICE_MGMT_URL: ${MEC_LOCAL_SERVICE_MGMT_URL:-}
+      MEC_APPLICATION_INSTANCE_ID: ${MEC_APPLICATION_INSTANCE_ID:-}
+      MEC_IN_COMPOSE: "1"
+      MEC_LOCAL_CSE_URL: http://mec-cse:8080
+      MEC_LOCAL_CALLBACK_URL: http://mec-check:8000/onem2m/notify
+      EVIDENCE_ROOT: /app/evidence
+    volumes:
+      - ./evidence:/app/evidence
+networks:
+  backend: {internal: true}
+  edge: {}
+volumes:
+  mec-data:
+  mec-metadata:

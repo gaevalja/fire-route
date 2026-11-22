@@ -22,12 +22,20 @@ class Resident:
     evacuated_at_s: int | None = None
 
 
+class FrameOrderError(ValueError):
+    """Rejected before movement: explicit reset or the next source frame required."""
+
+
 class Evacuation:
-    def __init__(self,assumptions=None):
+    def __init__(self,assumptions=None,*,compare=False):
         self.navigation = Navigation(assumptions)
         self.people = []
         self.last = None
         self.identities = set()
+        self.comparison = None
+        if compare:
+            from simulator.fire_policy.comparison import Comparison
+            self.comparison = Comparison(self.navigation.origin)
 
     def occupied(self):
         return Counter(tuple(sorted((p.node,p.target))) for p in self.people if p.target is not None)
@@ -41,13 +49,13 @@ class Evacuation:
             if data == self.last:
                 return False
             if self.last['ended']:
-                raise ValueError('The original fire scenario has ended')
+                raise FrameOrderError('The original fire scenario has ended')
             if any(data[k] != self.last[k] for k in ['incident_id','source','seed','wind_mps','source_manifest_sha256']):
-                raise ValueError('Scenario context changed without explicit reset')
+                raise FrameOrderError('Scenario context changed without explicit reset')
             if second != self.last['simulation_second']+1 or data['event_id'] in self.identities:
-                raise ValueError('Duplicate/conflicting/outdated/skipped simulation frame')
+                raise FrameOrderError('Duplicate/conflicting/outdated/skipped simulation frame')
         elif second != 0:
-            raise ValueError('An explicit scenario starts at second zero')
+            raise FrameOrderError('An explicit scenario starts at second zero')
         else:
             self.populate(data['seed'])
         self.navigation.update(frame)
@@ -97,6 +105,8 @@ class Evacuation:
         self.last = data
         self.identities.add(data['event_id'])
         self.verify_conservation()
+        if self.comparison is not None:
+            self.comparison.advance(second,self.navigation,ended=data['ended'])
         return True
 
     def populate(self,seed):
@@ -131,7 +141,7 @@ class Evacuation:
         evacuated = counts['EVACUATED']
         by_zone = Counter(p.node for p in self.people if p.status != 'EVACUATED')
         moving = Counter(p.node for p in self.people if p.target is not None)
-        return {'schema_version':1,'event_id':self.last['event_id'],'incident_id':self.last['incident_id'],
+        result = {'schema_version':1,'event_id':self.last['event_id'],'incident_id':self.last['incident_id'],
             'simulation_second':self.last['simulation_second'],'route_version':self.last['sequence'],
             'timestamp_utc':self.last['timestamp_utc'],'data_origin':'SYNTHETIC',
             'model_id':self.navigation.assumptions['model_id'],'model_provenance':'ASSUMED_NOT_CALIBRATED',
@@ -141,3 +151,6 @@ class Evacuation:
             'zones':[{'zone_id':node,'remaining_count':count,'moving_count':moving[node],
                       'assignment':'LAST_REACHED_NODE'} for node,count in sorted(by_zone.items())],
             'residents':[asdict(p) for p in self.people]}
+        if self.comparison is not None:
+            result['comparison'] = self.comparison.snapshot()
+        return result

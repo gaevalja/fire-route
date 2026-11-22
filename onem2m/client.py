@@ -7,7 +7,7 @@ import ssl
 import time
 from typing import Callable
 from urllib import error, request
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote, urlencode, urlsplit
 from uuid import uuid4
 
 from backend.config import http_url
@@ -47,8 +47,9 @@ class RejectRedirect(request.HTTPRedirectHandler):
 
 
 class HTTPTransport:
-    def __init__(self):
-        self.opener = request.build_opener(RejectRedirect(), request.HTTPSHandler(context=ssl.create_default_context()))
+    def __init__(self, *, tls_context=None):
+        self.opener = request.build_opener(RejectRedirect(), request.HTTPSHandler(context=
+            tls_context if tls_context is not None else ssl.create_default_context()))
 
     def __call__(self, method: str, url: str, headers: dict, body: bytes | None, timeout: float) -> WireResponse:
         req = request.Request(url, data=body, headers=headers, method=method)
@@ -77,20 +78,28 @@ def strict_json(data: bytes | str):
 
 class CSEClient:
     def __init__(self, url: str, originator: str, release: str, *, timeout: float = 5,
-                 transport: Callable | None = None, evidence=None, actor: str = "bootstrap"):
+                 transport: Callable | None = None, evidence=None, actor: str = "bootstrap",
+                 actor_transport: Callable | None = None):
         self.url = http_url(url, "CSE_BASE_URL")
         if not originator or any(c in originator for c in "\r\n"):
             raise ValueError("Invalid originator")
         self.originator, self.release, self.timeout = originator, release, timeout
         self.transport = HTTPTransport() if transport is None else transport
         self.evidence, self.actor = evidence, actor
+        self.actor_transport = actor_transport
 
     def for_actor(self, originator: str, actor: str) -> "CSEClient":
+        # An authenticated profile must select that actor's credentials. Never
+        # silently retain the bootstrap/admin certificate for a different AE.
+        transport = self.actor_transport(originator, actor) if self.actor_transport else self.transport
+        if self.actor_transport and transport is None:
+            raise ValueError('Actor credential transport unavailable; fallback rejected')
         return CSEClient(self.url, originator, self.release, timeout=self.timeout,
-                         transport=self.transport, evidence=self.evidence, actor=actor)
+                         transport=transport, evidence=self.evidence, actor=actor,
+                         actor_transport=self.actor_transport)
 
     def _request(self, method: str, path: str, resource_type: int | None = None, payload: dict | None = None,
-                 *, aggregate: bool = False) -> dict:
+                 *, aggregate: bool = False, query: dict | None = None) -> dict:
         if (not path.startswith("/") or path.startswith("//") or any(c in path for c in "?#\r\n")
                 or any(p in {".", ".."} for p in path.split("/"))):
             raise ValueError("Resource path must stay inside the configured CSE endpoint")
@@ -100,11 +109,16 @@ class CSEClient:
         if payload is not None:
             headers["Content-Type"] = "application/vnd.onem2m-res+json;ty=" + str(resource_type)
             body = json.dumps(payload, separators=(",", ":"), allow_nan=False).encode("utf-8")
+        if query is not None and method != 'GET':
+            raise ValueError('Filters require RETRIEVE')
+        suffix = '?' + urlencode(query) if query else ''
         record = {"actor": self.actor, "method": method, "path": path, "request_id": rqi,
                   "request_headers": {k: v for k, v in headers.items() if k != "X-M2M-Origin"}, "request_body": payload}
+        if query:
+            record['query'] = query
         start = time.monotonic()
         try:
-            wire = self.transport(method, self.url + quote(path, safe="/:~_-"), headers, body, self.timeout)
+            wire = self.transport(method, self.url + quote(path, safe="/:~_-") + suffix, headers, body, self.timeout)
             rh = {k.lower(): v for k, v in wire.headers.items()}
             record.update(http_status=wire.status, response_headers={k: v for k, v in rh.items() if k in {"x-m2m-ri", "x-m2m-rvi", "x-m2m-rsc", "content-type"}})
             if 300 <= wire.status < 400:
@@ -130,9 +144,11 @@ class CSEClient:
             record["response_body"] = result
             if not 200 <= wire.status < 300 or not 2000 <= rsc < 3000:
                 raise CSEError(f"CSE operation denied/failed (HTTP {wire.status}, RSC {rsc})", http_status=wire.status, rsc=rsc)
-            expected = 2000 if aggregate else (2001 if method == "POST" else 2000)
+            expected = 2000 if aggregate else (2001 if method == "POST" else 2002 if method == "DELETE" else 2000)
             if rsc != expected:
                 raise ProtocolError(f"Unexpected oneM2M success status for {method}", http_status=wire.status, rsc=rsc)
+            if method == 'DELETE' and wire.status != 200:
+                raise ProtocolError('Unexpected HTTP status for DELETE',http_status=wire.status,rsc=rsc)
             if aggregate:
                 responses = result.get("m2m:agr", {}).get("m2m:rsp") if isinstance(result.get("m2m:agr"), dict) else None
                 if (wire.status != 200 or not isinstance(responses, list) or not responses
@@ -150,6 +166,35 @@ class CSEClient:
 
     def retrieve(self, path: str) -> dict:
         return self._request("GET", path)
+
+    def delete(self, path: str) -> dict:
+        """Single DELETE, requiring correlated HTTP 200 / RSC 2002; no retry."""
+        return self._request('DELETE',path)
+
+    def discover(self, path: str, *, label: str, resource_type: int, limit: int = 100) -> list[str]:
+        """Bounded TS-0009 discovery; label is a filter, never a raw query/URL.
+
+        drt=2 requests unstructured resource references. A caller must read back
+        and verify discovered resources before using them for device control.
+        No result is cached or synthesized from the bootstrap inventory.
+        """
+        if (not isinstance(label, str) or not label or len(label) > 128
+                or any(ord(c) < 33 or ord(c) == 127 for c in label)):
+            raise ValueError('Invalid discovery label')
+        if type(resource_type) is not int or resource_type not in RESOURCE_ROOTS:
+            raise ValueError('Unsupported discovery resource type')
+        if type(limit) is not int or not 1 <= limit <= 1000:
+            raise ValueError('Invalid discovery limit')
+        result = self._request('GET', path, query={'fu': 1, 'drt': 2,
+            'ty': resource_type, 'lbl': label, 'lim': limit})
+        refs = result.get('m2m:uril')
+        if (not isinstance(refs, list) or len(refs) > limit
+                or any(not isinstance(ref, str) or not ref or len(ref) > 1024
+                    or any(c in ref for c in '?&#\\\r\n') or '://' in ref
+                    or any(part in {'.', '..'} for part in ref.split('/')) for ref in refs)
+                or len(refs) != len(set(refs))):
+            raise ProtocolError('Malformed or over-limit oneM2M discovery URI list')
+        return refs
 
     def create(self, path: str, resource_type: int, attributes: dict) -> dict:
         if resource_type not in RESOURCE_ROOTS:

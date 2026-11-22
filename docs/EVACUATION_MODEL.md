@@ -1,5 +1,46 @@
 # Shared fixed-location guidance and moving synthetic residents
 
+## Single-resident policy comparison
+
+Both comparison residents consume the same current 162-zone frame. The
+responder's paired replay and the batch evaluator use one execution loop.
+The viewer accepts a seed, wind, ignition room and starting room for both
+residents. A shared timeline samples every 30 seconds and includes every
+decision time and terminal time. The responder's live diagnostic records use
+the configured fixed-origin room, F7-R3 by default. Batch runs use the archived
+0015 evaluation seed and starting-room functions.
+
+The comparison Dijkstra uses the original weighted graph, unoccupied edge
+costs, standard 1.1 m/s routing weight and fire 45/smoke 60/collapse blocking
+(ADR-031; 55/70 before 2026-11-19).
+The common 0015 action executor drives simulated elapsed time. After 180 seconds
+of awareness delay, decisions occur on action boundaries. A move or exit
+normally takes 30 seconds, extending to 60 when the origin or destination has
+fire above 40 or smoke above 65. At the lobby both can use the same exterior
+`EXIT` action. When Dijkstra cannot find a route, it waits 30 seconds and plans
+again against the current frame.
+
+The 0015 action model applies a normal move at action start. Death is checked
+at every simulated second and takes priority over rescue at the end of an
+action. Fire >=60, smoke >=80, collapse of the current zone and elevator
+selection follow the archived outcome rules. Roof rescue starts at 21 minutes.
+Room rescue starts at 23 minutes with fire <=50 and a living occupant, including
+a Dijkstra occupant who stayed in a room while routes were unavailable.
+
+The original checkpoint, its deterministic browser actor export, and run
+manifest live under `simulator/fire_policy/assets`. Both weight files are
+verified by SHA-256 when comparison starts. NumPy 2.1.3 evaluates the actor's
+three dense layers using the exact observation order and action mask. It is
+installed only for comparison-enabled application images or the Python
+comparison extra. The existing multi-person navigation, room guidance and
+occupancy sensing continue to use the FireRoute contracts.
+
+Comparison results are correlated with the same incident, frame and route
+version as the responder-only diagnostic CIN. The MEC dashboard verifies the
+returned analysis and result digest against the local computation, then
+publishes the verified result. The 0015 action is displayed as simulation
+detail. Device delivery uses the original fixed guidance contract.
+
 Decision date: 2026-11-12. The user requested both modes with realistic behavior and authorized the team to choose assumptions because no measured geometry or population data is available. The supplied fire_evac engine/configuration remains unchanged. This document defines a new FireRoute evacuation layer, not behavior already present in that engine.
 
 ## Scope and evidence
@@ -28,11 +69,11 @@ Population conservation must hold: total = evacuated + remaining at every tick. 
 
 The headless wrapper exports only current states from the unchanged source into an ignored bounded JSONL trace. Python replay and the CSE gate consume that trace; this is explicit synthetic replay, not a physical sensor or an independently invented fire model. T23 must create/read actual frame CINs and consume their real subscriptions before processing. Fixed decisions and private moving/occupancy snapshots are separate actual CSE records. Group/fopt controls three independently ACKing simulated signs for the selected fixed guidance origin; it does not claim those signs display every resident's individual route.
 
-Unit verification covers travel time, delay, queue capacity/fairness, no teleportation, rerouting, collapse exclusion, no-route, population conservation, duplicate/clock behavior and reproducibility. Actual-CSE proof is separate. The original three-floor API/UI remains a regression profile; the new selected dashboard is implemented but requires its own actual gate and browser checks. Neither source/model tests nor UI source validate physical evacuation predictions or complete MEC.
+Unit verification covers travel time, delay, queue capacity/fairness, no teleportation, rerouting, collapse exclusion, no-route, population conservation, duplicate/clock behavior and reproducibility. Actual-CSE proof is separate. The original three-floor API/UI remains a regression profile; selected core and role HTTP/CSE baseline gates have passed, with comprehensive browser and natural-hazard integration checks tracked separately. Neither source/model tests nor UI source validate physical evacuation predictions or complete MEC.
 
 ## Implemented commands and dashboard boundary
 
-make scenario-preview exports 181 source states by default and runs the pure model offline, explicitly CSE=NOT_RUN. make p1-scenario publishes each current state to the actual CSE, waits for its real notification before advancing people, persists fixed/public versus moving/private results and checks Group/independent ACKs at 60-second milestones. The gate also checks real resident denials of private moving/occupancy CINs. It is prepared, not PASS until executed.
+make scenario-preview exports 181 source states by default and runs the pure model offline, explicitly CSE=NOT_RUN. make p1-scenario publishes each current state to the actual CSE, waits for its real notification before advancing people, persists fixed/public versus moving/private results and checks Group/independent ACKs at 60-second milestones. The gate also checks real resident denials of private moving/occupancy CINs. That baseline core gate has passed in the user environment; the separate natural-hazard gate below subsequently passed its own actual CSE run.
 
 make p1-scenario-dashboard checks authenticated HTTP views/actions and stale clearing against the real CSE-backed selected app. make demo-scenario-up exports up to 1800 source seconds by default and starts that app at http://127.0.0.1:3001. Log in with the private ignored role codes. Responder can select fixed versus moving view and an individual synthetic resident, advance 1/30 seconds, play/pause/reset or stop display-c. Resident sees only approved fixed-origin guidance; moving/occupancy records are responder-only. Fixed origin is a configuration value, not yet a per-browser API query parameter. Signs announce that one fixed query's common exit/status.
 
@@ -47,3 +88,7 @@ Pause/selection UI fix: the selected responder dashboard now keeps the last veri
 Compare exit arrivals over simulated time, observed T50/T90/T100, queue peak/location, no-route/in-transit-blocked counts, exit/path changes and incomplete ACKs. routing_cost is an assumed current travel-time cost for the fixed room, not the population's observed completion time or network latency. A fixed exit can change from occupancy/smoke costs even with no blocked nodes. Same-seed/config traces with the same sampling interval are required for controlled comparisons. The +30 action accepts every intermediate fire frame but publishes population snapshots at the action end, so fine-grained peaks/times need automatic/one-second result sampling.
 
 Actual baseline core/HTTP gates now pass (STATUS links originals). The user's first manual run stopped at second 208 with 135/170 at exit, 26 moving and nine queued. A read-only report and chart are at evidence/20261112-082427Z-4c65518c/. Source/model/network evidence remains distinct; no experimental safety validation or measured E2E latency is claimed.
+
+Natural-hazard extension (2026-11-14): make hazard-preview replays the unchanged seed-59/wind-5 source through all intermediate seconds. Offline observations: baseline 0, blocked-original-path alternative 466 (F4-SA excluded, same EXIT_A), first collapsed node F4-R6 at 600, fixed-origin isolation at 727 while F7-R3 remains unblocked. The original source and movement assumptions are unchanged. The default population has already evacuated by these later queries; no trapped-person recovery or physical performance claim follows. make p1-hazards separately requires real CIN/SUB ingestion, per-stage Group/ACKs and a stopped-device INCOMPLETE case. Its actual run passed at evidence/20261114-021459Z-02e80b4c/ with 729 source CINs/SUBs, 15 command CINs and 14 independent ACK CINs; full recovery and hazard browser checks remain open.
+
+Phase 2 preparation under ADR-019: mec.risk.worker reuses this exact model behind a bounded JSONL stream, independently of CSE/UI/MEC networking. Its rejection envelope clears only the component output; this is not proof of malformed-CSE-event handling or device recovery in the main app. Three archived source envelopes passed the local CLI with original UTC/version retained. The analysis image is prepared, not execution-verified. The original source rules, default assumptions and earlier actual hazard artifacts remain unchanged. Hosted integration is deferred until a separate Phase 3 instruction.

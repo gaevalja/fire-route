@@ -1,0 +1,5 @@
+simulator/scenarios/fire_evac/** -text
+simulator/fire_policy/assets/** -text
+simulator/fire_policy/assets/manifest.json whitespace=cr-at-eol
+simulator/fire_policy/rl_config.py -text
+simulator/fire_policy/rl_sim.py -text

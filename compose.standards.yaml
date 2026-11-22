@@ -1,0 +1,59 @@
+name: fire-route-standards
+services:
+  mqtt:
+    image: eclipse-mosquitto:2.0.22
+    volumes:
+      - ./infra/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-h", "127.0.0.1", "-t", "$$SYS/broker/version", "-C", "1", "-W", "3"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+  cse:
+    init: true
+    stop_signal: SIGINT
+    stop_grace_period: 30s
+    build:
+      context: .
+      dockerfile: infra/cse/Dockerfile
+    entrypoint: ["python", "/opt/fire-route/standards_entrypoint.py"]
+    depends_on:
+      mqtt:
+        condition: service_healthy
+    volumes:
+      - ./infra/cse/standards_entrypoint.py:/opt/fire-route/standards_entrypoint.py:ro
+      - standards-data:/data
+      - standards-metadata:/metadata
+    healthcheck:
+      test: ["CMD", "python", "/opt/fire-route/healthcheck.py"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+  standards:
+    build:
+      context: .
+      dockerfile: infra/standards.Dockerfile
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    depends_on:
+      cse:
+        condition: service_healthy
+    environment:
+      CSE_BASE_URL: http://cse:8080
+      CSE_BASE_RESOURCE: fire-route-dev
+      CSE_RELEASE: "4"
+      CSE_ORIGINATOR: CAdmin
+      CSE_MODE: real
+      MEC_MODE: unavailable
+      DEMO_MODE: simulator
+      NOTIFICATION_PUBLIC_URL: http://standards:8000/onem2m/notify
+      NOTIFICATION_BIND_HOST: 0.0.0.0
+      NOTIFICATION_BIND_PORT: "8000"
+      CSE_RUNTIME_INFO: /metadata/cse.json
+      EVIDENCE_ROOT: /app/evidence
+    volumes:
+      - ./evidence:/app/evidence
+      - standards-metadata:/metadata:ro
+volumes:
+  standards-data:
+  standards-metadata:

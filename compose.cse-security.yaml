@@ -1,0 +1,55 @@
+name: fire-route-security
+services:
+  secure-cse:
+    init: true
+    stop_signal: SIGINT
+    stop_grace_period: 30s
+    build:
+      context: .
+      dockerfile: infra/cse/Dockerfile
+    networks: [backend]
+    volumes:
+      - secure-data:/data
+      - secure-metadata:/metadata
+    healthcheck:
+      test: ["CMD", "python", "/opt/fire-route/healthcheck.py"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+  gateway:
+    # Official stable version verified; image pull/digest/runtime still need the real gate.
+    image: nginx:1.30.6-alpine
+    depends_on:
+      secure-cse: {condition: service_healthy}
+    networks:
+      backend: {}
+      clients:
+        aliases: [wrong-certificate-host]
+    volumes:
+      - ./infra/cse/gateway.conf:/etc/nginx/nginx.conf:ro
+      - ./.runtime/cse-mtls/ca.crt:/run/cse/ca.crt:ro
+      - ./.runtime/cse-mtls/gateway:/run/cse/gateway:ro
+  secure-check:
+    build:
+      context: .
+      dockerfile: infra/core.Dockerfile
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    entrypoint: ["python", "-m", "tests.integration.cse_security"]
+    depends_on:
+      gateway: {condition: service_started}
+    networks: [clients]
+    environment:
+      CSE_SECURITY_URL: https://gateway:8443
+      CSE_PKI_DIRECTORY: /run/enrollment
+      EVIDENCE_ROOT: /app/evidence
+    volumes:
+      - ./evidence:/app/evidence
+      - secure-metadata:/metadata:ro
+      # Privileged enrollment/test runner only; never mounted into CSE or gateway.
+      - ./.runtime/cse-mtls:/run/enrollment
+networks:
+  backend: {internal: true}
+  clients: {internal: true}
+volumes:
+  secure-data:
+  secure-metadata:

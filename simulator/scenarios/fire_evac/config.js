@@ -29,8 +29,15 @@
     INITIAL_FIRE: 18,
     MAX_LEVEL: 100,
     SMOKE_ABOVE_FIRE_CAP: 30,
+    // Model the open-air rooftop as dispersing smoke beyond this level.
+    ROOF_SMOKE_CAP: 30,
     FIRE_GROWTH_PER_MINUTE: 6.5,
+    // Existing fire doubles its local growth rate by level 70, then stays capped.
+    FIRE_GROWTH_ACCELERATION_FULL_AT: 70,
+    FIRE_GROWTH_MAX_MULTIPLIER: 2,
     FIRE_SPREAD_PER_MINUTE: 0.16,
+    // Other rooms resist fire growth and inflow. The ignition room uses full rates.
+    ROOM_FIRE_RESISTANCE_FACTOR: 0.193,
     SMOKE_GENERATION_PER_FIRE: 0.8,
     SMOKE_SPREAD_PER_MINUTE: 0.8,
     SMOKE_DIRECT_FIRE_TRANSFER: 0.7,

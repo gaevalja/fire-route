@@ -12,23 +12,55 @@ from backend.delivery import DeliverySession,display_callbacks
 from backend.evidence import Evidence,source_identity
 from backend.notifications import NotificationService,NotificationStore,notification_server
 from backend.p0 import IntegrationBlocked,ROOT,subscription_refs,wait_for_cse
+from backend.scenario_ingestion import IngestionResult,accept_live_frame
+from backend.scenario_input import PendingInput
+from mec.occupancy.estimator import evaluate,prioritize
 from onem2m.bootstrap import bootstrap
 from onem2m.client import CSEClient,CSEError,ProtocolError,strict_json
+from simulator.access import AccessGateway,canonical_sha256
 from simulator.evacuation import Evacuation
+from simulator.presence import PresenceScanner
 from simulator.events import utc_now
-from simulator.scenario_frames import ScenarioFrame,emission,read_trace,source_manifest,trace_digest
+from simulator.scenario_frames import ScenarioFrame,read_trace,source_manifest,trace_digest
+
+# Pending access batches resubmitted after a failed estimate; beyond this the
+# estimator journal would have a gap, so estimates stay UNKNOWN until reset.
+MAX_UNACKED_ACCESS_BATCHES = 32
+
+
+def zone_routes(model):
+    """Per-room guidance from the same accepted frame/blocked set as the fixed route."""
+    navigation=model.navigation;occupied=model.occupied()
+    rooms=sorted(n for n,m in navigation.metadata.items() if m['kind']=='room')
+    return {room:{k:r[k] for k in ['status','target_exit','path']}
+            for room,r in ((room,navigation.route(room,occupied=occupied)) for room in rooms)}
 
 
 class ScenarioSession:
+    access_sensing = False
+    gateway = None  # Class defaults keep sessions built without __init__ (unit fixtures) sensing-free.
+    scanner = None
+
+    def access_readers(self):
+        return []
+
     def __init__(self,settings):
         self.settings = settings
         self.evidence = Evidence(settings.evidence_root,secret_values=(settings.admin_originator,))
         self.namespace = 'fr_'+uuid4().hex[:16]
         self.incident_id = 'inc-'+uuid4().hex
         self.hash = source_manifest()['bundle_sha256']
-        self.model = Evacuation()
+        self.model = Evacuation(compare=os.getenv('FIREROUTE_POLICY_COMPARISON') == '1')
         self.server = self.worker = self.delivery = None
         self.frames = 0
+        self.pending_input = None
+        self.gateway = None
+        self.scanner = None
+        self.access_frames = []
+        self.presence_scans = []
+        self.access_unacked = []
+        self.access_broken = None
+        self.access_discovery = None
         self.admin = CSEClient(settings.cse_url,settings.admin_originator,settings.release,
             timeout=settings.request_timeout,evidence=self.evidence)
 
@@ -47,8 +79,13 @@ class ScenarioSession:
         self.server = notification_server(self.settings.bind_host,self.settings.bind_port,service)
         self.worker = Thread(target=self.server.serve_forever,daemon=True);self.worker.start()
         self.resources = bootstrap(self.admin,self.settings.cse_base,self.namespace,self.settings.notification_url,
-            self.settings.retention_seconds,decision_policies=True,display_callbacks=display_callbacks(self.settings),dashboard=True)
+            self.settings.retention_seconds,decision_policies=True,display_callbacks=display_callbacks(self.settings),dashboard=True,
+            access_sensing=self.access_sensing,access_readers=self.access_readers())
         self.clients = {role:self.admin.for_actor(actor['ae_id'],role) for role,actor in self.resources['actors'].items()}
+        if self.access_sensing:
+            self.gateway = AccessGateway(self.model.navigation)
+            self.scanner = PresenceScanner(self.model.navigation)
+            self.access_discovery = self.discover_access()
         self.controller = self.clients['controller']
         parent = self.resources['containers']['sensor/telemetry']['path']
         sub = self.controller.ensure(parent,23,{'rn':'scenario-sub','nu':[self.settings.notification_url],
@@ -64,27 +101,135 @@ class ScenarioSession:
         self.evidence.write('navigation.json',self.model.navigation.document())
 
     def accept_raw(self,raw):
-        frame = emission(raw,self.incident_id,self.namespace+':scenario-replay',self.hash)
+        if self.pending_input is None:
+            self.pending_input=PendingInput(raw,self.incident_id,self.namespace+':scenario-replay',self.hash)
+        elif not self.pending_input.matches(raw):
+            raise ProtocolError('Resolve the pending source frame before advancing the trace')
         parent = self.resources['containers']['sensor/telemetry']['path']
-        name = 'frame-'+str(frame.data['sequence'])
-        body = frame.to_dict()
         sensor = self.clients['sensor']
-        cin = sensor.ensure(parent,4,{'rn':name,'cnf':'application/json:0','con':json.dumps(body,separators=(',',':'))})
-        actual = sensor.resource(sensor.retrieve(parent+'/'+name),4)
-        if actual['ri'] != cin['ri'] or strict_json(actual['con']) != body:
-            raise ProtocolError('Actual scenario CIN read-back differs')
+        frame,actual=self.pending_input.deliver(sensor,parent,self.settings,self.evidence)
+        receipt=self.consume_received(frame,actual['ri'])
+        if receipt.state!='ACCEPTED':
+            raise ProtocolError('New actual frame did not advance the controller')
+        self.pending_input=None
+
+    def consume_received(self,frame,cin_ri):
+        """Consume a matching durable real callback; never publish on rejection/replay."""
+        body=frame.to_dict()
         deadline = time.monotonic()+self.settings.notification_timeout
         while not self.inbox.find(frame.event_id) and time.monotonic() < deadline:
             time.sleep(.02)
         rows = self.inbox.find(frame.event_id)
-        if len(rows) != 1 or rows[0]['cin_ri'] != cin['ri'] or rows[0]['event'] != body:
+        if len(rows) != 1 or rows[0]['cin_ri'] != cin_ri or rows[0]['event'] != body:
             raise ProtocolError('Matching durable actual scenario notification missing')
         received = ScenarioFrame.parse(rows[0]['event'],self.hash)
-        if not self.model.accept(received):
-            raise ProtocolError('New actual frame did not advance the controller')
-        self.frames += 1
-        self.evidence.append('frames.jsonl',{'event_id':frame.event_id,'cin_ri':cin['ri'],
-            'simulation_second':body['simulation_second'],'sequence':body['sequence'],'zones':len(body['zones'])})
+        before = self.positions() if self.gateway else None
+        if received.data['incident_id']!=self.incident_id or received.data['source']!=self.namespace+':scenario-replay':
+            receipt=IngestionResult('REJECTED','BOUND_CONTEXT')
+        else:
+            receipt=accept_live_frame(self.model,received,self.settings,self.hash)
+        if receipt.state=='ACCEPTED' and before is not None:
+            self.observe_access(before,received.data)
+        self.evidence.append('ingestion.jsonl',{'event_id':frame.event_id,'cin_ri':cin_ri,
+            'state':receipt.state,'reason':receipt.reason,'source_timestamp_utc':body['timestamp_utc'],
+            'sequence':body['sequence'],'route_version':self.model.last['sequence'] if self.model.last else None})
+        if receipt.state=='ACCEPTED':
+            self.frames += 1
+            self.evidence.append('frames.jsonl',{'event_id':frame.event_id,'cin_ri':cin_ri,
+                'simulation_second':body['simulation_second'],'sequence':body['sequence'],'zones':len(body['zones'])})
+        return receipt
+
+    def positions(self):
+        return {p.resident_id:p.node for p in self.model.people}
+
+    def observe_access(self,before,frame):
+        """Memory-only per-frame sensing; it never blocks or fails route ingestion."""
+        if self.access_broken:return
+        try:
+            after=self.positions()
+            self.access_frames.append(self.gateway.observe(before,after,frame))
+            if self.scanner and self.scanner.due(frame):
+                self.presence_scans.append(self.scanner.observe(after,frame))
+        except ValueError:
+            self.access_broken='GATEWAY_INVARIANT'
+            self.evidence.append('access-failures.jsonl',{'state':'STOPPED','reason':self.access_broken,
+                'simulation_second':frame['simulation_second']})
+
+    def discover_access(self):
+        """oneM2M label discovery of both sensor containers, read back by resource ID (non-fatal)."""
+        records=[]
+        for key,prefix in [('access-gateway/passages','access-passages:'),('presence-scanner/scans','presence-scans:')]:
+            container=self.resources['containers'][key];label=prefix+self.namespace
+            try:
+                refs=self.admin.discover('/'+self.settings.cse_base,label=label,resource_type=3)
+                found={r.rstrip('/').split('/')[-1] for r in refs}
+                actual=self.admin.resource(self.admin.retrieve(container['path']),3)
+                verified=found=={container['ri']} and actual['ri']==container['ri'] and label in actual.get('lbl',[])
+            except CSEError as exc:
+                refs,verified=[],False
+                self.evidence.append('access-failures.jsonl',{'state':'DISCOVERY_UNAVAILABLE','container':key,
+                                                              'reason':type(exc).__name__})
+            records.append({'container':key,'query_label':label,'resource_type':3,'refs':refs,
+                            'expected_ri':container['ri'],'verified':verified})
+        record={'containers':records,'verified':all(r['verified'] for r in records)}
+        self.evidence.write('access-discovery.json',record)
+        return record
+
+    def estimate_occupancy(self,references):
+        """Hook: the base runtime has no estimator; the MEC session consumes the occupancy service."""
+        return None
+
+    def publish_access(self,common):
+        """Write the access and presence-scan CINs, request the estimate and publish it; never fails the route publish."""
+        if not self.gateway or self.access_broken:return None
+        try:
+            if self.access_frames:
+                batch=self.gateway.batch(self.access_frames,self.incident_id,self.namespace+':access-gateway')
+                scans=self.scanner.batch(self.presence_scans,batch,self.namespace+':presence-scanner')
+                version=str(batch['sequence_to'])
+                written=self.write('access-gateway/passages','access-'+version,batch,actor='access-gateway')
+                scanned=self.write('presence-scanner/scans','presence-'+version,scans,actor='presence-scanner')
+                # Cleared only after both CINs exist; a retry rewrites the same deterministic content.
+                self.access_frames=[];self.presence_scans=[]
+                self.access_unacked.append({'path':written['path'],'ri':written['ri'],
+                    'content_sha256':canonical_sha256(batch),
+                    **{k:batch[k] for k in ['event_id','incident_id','sequence_from','sequence_to','timestamp_utc']},
+                    'presence':{'path':scanned['path'],'ri':scanned['ri'],'content_sha256':canonical_sha256(scans)}})
+                self.evidence.append('access-batches.jsonl',{'cin_ri':written['ri'],'presence_cin_ri':scanned['ri'],
+                    'sequence_from':batch['sequence_from'],'sequence_to':batch['sequence_to'],
+                    'events':len(batch['events']),'scans':len(scans['scans'])})
+            if not self.access_unacked:return None
+            if len(self.access_unacked)>MAX_UNACKED_ACCESS_BATCHES:
+                self.access_broken='ESTIMATE_CATCH_UP_LIMIT';self.access_unacked=[]
+                self.evidence.append('access-failures.jsonl',{'state':'STOPPED','reason':self.access_broken})
+                return None
+            outcome=self.estimate_occupancy(list(self.access_unacked))
+            if outcome is None:
+                self.access_unacked=[]  # No estimator in this runtime: nothing to catch up.
+                return None
+            estimate,provenance=outcome
+            self.access_unacked=[]
+            snapshot=self.model.snapshot()
+            blocked=sorted(self.model.navigation.blocked)
+            publication={**common,'kind':'FireRouteOccupancyPublication','state':'ESTIMATED',
+                'applied_through_sequence':estimate['applied_through_sequence'],
+                'estimator':{**provenance,'estimator_id':estimate['estimator_id'],
+                             'estimator_policy_sha256':estimate['estimator_policy_sha256']},
+                **{k:estimate[k] for k in ['registered_prior_total','estimated_remaining','zone_count_total',
+                                           'presence_scans','detected_exits','unmatched_departures']},
+                'priority':prioritize(estimate['zones'],self.model.last['zones'],blocked),
+                'evaluation':evaluate(estimate['zones'],snapshot['zones']),
+                'sensing':{**{k:self.gateway.sensing[k] for k in ['miss_probability','presence_scan_interval_seconds',
+                               'device_carry_probability','device_detection_probability','false_detection_probability']},
+                           'truth_passages':self.gateway.truth_passages,'missed_passages':self.gateway.missed_passages,
+                           'discovery_verified':bool(self.access_discovery and self.access_discovery['verified'])}}
+            self.write('controller/occupancy-estimates','estimate-'+str(common['route_version']),publication)
+            return publication
+        except Exception as exc:
+            # Pending batches stay for catch-up; the view reports UNKNOWN for this version.
+            self.evidence.append('access-failures.jsonl',{'state':'ESTIMATE_UNAVAILABLE','reason':type(exc).__name__,
+                'route_version':common['route_version'],'pending_batches':len(self.access_unacked)})
+            return None
 
     def write(self,key,name,value,actor='controller'):
         client = self.clients[actor]
@@ -102,14 +247,22 @@ class ScenarioSession:
         version = str(result['route_version'])
         route = {**common,**result['fixed_route'],'blocked_nodes':sorted(self.model.navigation.blocked),'mode':'FIXED_ORIGIN'}
         record = self.write('controller/routes','route-'+version,route)
+        if 'controller/zone-routes' in self.resources['containers']:
+            # Room-to-exit guidance for residents who choose their own room; same frame, version and blocked set.
+            self.write('controller/zone-routes','zone-routes-'+version,{**common,'blocked_nodes':route['blocked_nodes'],
+                'origin_kind':'ROOM','computed_by':'CONTROLLER_SAME_FRAME','routes':zone_routes(self.model)})
         # Full per-person state is deliberately in responder-only CSE records.
-        detail = self.write('controller/diagnostics','moving-'+version,{**common,
-            'model_provenance':'ASSUMED_NOT_CALIBRATED','population':result['population'],'residents':result['residents']})
+        private = {**common,'model_provenance':'ASSUMED_NOT_CALIBRATED',
+                   'population':result['population'],'residents':result['residents']}
+        if 'comparison' in result:
+            private['comparison'] = result['comparison']
+        detail = self.write('controller/diagnostics','moving-'+version,private)
         occupancy = self.write('occupancy/observations','occupancy-'+version,{**common,
             'assignment':'LAST_REACHED_NODE','zones':result['zones'],'population':result['population']},actor='occupancy')
         delivered = self.delivery.dispatch(route,allow_incomplete=True)
         self.write('controller/status','status-'+version,{**common,'observed_at_utc':common['timestamp_utc'],
             'delivery':{k:delivered[k] for k in ['state','ack_count']}})
+        self.publish_access(common)
         self.evidence.append('scenario-results.jsonl',{'simulation_second':result['simulation_second'],
             'fixed_route':record,'moving':detail,'occupancy':occupancy,'delivery_state':delivered['state'],
             'ack_count':delivered['ack_count']})

@@ -78,6 +78,17 @@ class ConfigurationTests(unittest.TestCase):
         self.assertEqual(s.cse_mode, "real")
         self.assertNotIn("admin_originator", s.public())
 
+    def test_hosted_pending_profile_is_rejected_before_any_connection(self):
+        with self.assertRaisesRegex(ConfigurationError,'Only the local profile'):
+            Settings.load({'FIREROUTE_PROFILE':'hosted_pending'},Path('/missing-test-env'))
+        with self.assertRaisesRegex(ConfigurationError,'Only the local profile'):
+            Settings.load({},Path('infra/profiles/hosted.env.example'))
+
+    def test_local_profile_example_uses_existing_defaults(self):
+        config=Settings.load({},Path('infra/profiles/local.env.example'))
+        self.assertEqual(config.deployment_profile,'local')
+        self.assertEqual(config.cse_url,'http://127.0.0.1:8080')
+
     def test_environment_overrides_dotenv_without_shell_expansion(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / ".env"

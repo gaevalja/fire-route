@@ -1,19 +1,86 @@
 <!doctype html>
 <html lang="ko">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FireRoute · 통합 대피 시뮬레이션</title><link rel="stylesheet" href="/styles.css"><script type="module" src="/app.js"></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title data-en="FireRoute · Evacuation Simulator">FireRoute · 통합 대피 시뮬레이션</title><link rel="stylesheet" href="/styles.css"><script type="module" src="/app.js"></script></head>
 <body>
-<header><b>FireRoute <span>SCENARIO LAB</span></b><span class="badge">10층 + 옥상 · 합성 162구역 · MEC 미연결</span></header>
+<header>
+  <b>FireRoute <span>SCENARIO LAB</span></b>
+  <div class="header-controls">
+    <span id="mec-badge" class="badge" data-en="10 floors + roof · 162 simulated zones · MEC disconnected">10층 + 옥상 · 합성 162구역 · MEC 미연결</span>
+    <label class="language-picker" for="language-select"><span data-en="Language">언어</span>
+      <select id="language-select"><option value="ko" lang="ko">한국어</option><option value="en" lang="en">English</option></select>
+    </label>
+  </div>
+</header>
 <main>
-<section id="login" class="card narrow"><h1>대피 시뮬레이션 접속</h1><p>같은 화재 상태에서 고정 위치 안내와 가상 주민 이동을 확인합니다.</p><form id="login-form"><label for="role">역할</label><select id="role"><option value="resident">주민</option><option value="responder">구조대</option></select><label for="code">접속 코드</label><input id="code" type="password" required autocomplete="current-password"><button>접속</button></form><p id="error" role="alert"></p></section>
+<section id="login" class="card narrow"><h1 data-en="Sign in to the evacuation simulator">대피 시뮬레이션 접속</h1><p data-en="View fixed-origin guidance and simulated resident movement during the same fire.">같은 화재 상태에서 고정 위치 안내와 가상 주민 이동을 확인합니다.</p><form id="login-form"><label for="role" data-en="Role">역할</label><select id="role"><option value="resident" data-en="Resident">주민</option><option value="responder" data-en="Responder">구조대</option></select><label for="code" data-en="Access code">접속 코드</label><input id="code" type="password" required autocomplete="current-password"><button data-en="Sign in">접속</button></form><p id="error" role="alert"></p></section>
 <div id="app" hidden>
-<section class="heading"><div><p class="eyebrow">SYNTHETIC EVACUATION · ASSUMED GEOMETRY</p><h1>화재 · 대피 통합 상황판</h1><p>실측 도면·실제 인원·안전한 대피를 예측하거나 보장하지 않습니다.</p></div><button id="logout">로그아웃</button></section>
-<section class="metrics"><article class="card"><small>모의 시간</small><strong id="clock">—</strong></article><article class="card"><small>안내 상태</small><strong id="guidance">대기</strong></article><article class="card"><small>고정 출발점의 계산 출구</small><strong id="exit">—</strong></article><article class="card"><small>선택한 안내의 장치 ACK</small><strong id="acks">— / 3</strong></article></section>
-<p id="notice" class="notice" role="status">실제 CSE 기록을 확인하고 있습니다.</p>
+<section class="heading"><div><p class="eyebrow">SYNTHETIC EVACUATION · ASSUMED GEOMETRY</p><h1 data-en="Fire and Evacuation Dashboard">화재 · 대피 통합 상황판</h1><p data-en="This simulation uses assumed geometry and synthetic residents and cannot establish evacuation safety.">실측 도면·실제 인원·안전한 대피를 예측하거나 보장하지 않습니다.</p></div><button id="logout" data-en="Sign out">로그아웃</button></section>
+<nav id="simulator-views" class="simulator-views" aria-label="시뮬레이터 화면" data-en-aria-label="Simulator views" hidden>
+  <button id="show-live" type="button" aria-controls="live-simulator" aria-pressed="true" data-en="Live Dashboard">실시간 상황판</button>
+  <button id="show-model-replay" type="button" aria-controls="model-replay" aria-pressed="false" data-en="Dijkstra vs PPO">다익스트라 · PPO 비교</button>
+</nav>
+<iframe id="model-replay" title="다익스트라와 PPO 대피 정책 비교" data-en-title="Dijkstra and PPO evacuation policy comparison" hidden></iframe>
+<div id="live-simulator">
+<section class="metrics"><article class="card"><small data-en="Simulation time">모의 시간</small><strong id="clock">—</strong></article><article class="card"><small data-en="Guidance status">안내 상태</small><strong id="guidance" data-en="Waiting">대기</strong></article><article class="card"><small data-en="Calculated exit from the fixed origin">고정 출발점의 계산 출구</small><strong id="exit">—</strong></article><article class="card"><small data-en="Device ACKs for the selected route">선택한 안내의 장치 ACK</small><strong id="acks">— / 3</strong></article></section>
+<p id="notice" class="notice" role="status" data-en="Checking live CSE records.">실제 CSE 기록을 확인하고 있습니다.</p>
 <p id="snapshot-note" class="snapshot-note" role="status" hidden></p>
-<section id="controls" class="card" hidden><div class="buttons"><button data-action="step">+1초</button><button data-action="advance_30">+30초</button><button data-action="resume">자동 진행</button><button data-action="pause">일시정지</button><button data-action="stop_display_c">장치 C 중지</button><button data-action="reset">초기화</button></div><p id="runtime">처리 상태 확인 중</p><p>원본 엔진의 시간을 진행합니다. 통신·ACK 완료를 기다리므로 화면 배속은 달라질 수 있습니다. 일시정지 후 30초가 지나면 안내가 만료됩니다.</p></section>
-<section class="grid"><article class="card"><div class="toolbar"><div><h2>층별 모식도</h2><p>길이·수용 인원은 측정되지 않은 가정값입니다.</p></div><label>층 <select id="floor"></select></label><label>보기 <select id="mode"><option value="fixed">고정 위치 안내</option><option id="moving-option" value="moving" hidden>가상 주민 이동</option></select></label></div><svg id="map" viewBox="0 0 840 440" role="img" aria-label="선택한 층의 합성 구역과 대피 상태"></svg><p class="legend">초록: 계산 경로 · 주황: 모의 위험 · 빨강: 차단 · 파랑 점: 선택한 가상 주민</p></article>
-<article class="card"><h2 id="detail-title">고정 위치의 최신 안내</h2><div id="fixed-detail"></div><div id="moving-detail" hidden><label for="person">가상 주민 선택</label><select id="person" disabled><option>주민 기록을 확인하고 있습니다</option></select><p id="person-state"></p><p>점은 구역·구역 사이의 모의 진행 상태입니다. 저장 기록을 표시할 때는 저장 당시 위치이며, 실제 위치 측정이 아닙니다.</p></div><ol id="path"></ol><p>3개 가상 안내 장치는 고정 출발점의 공통 안내를 확인합니다. 모든 주민의 개별 경로를 표시하는 장치라는 뜻은 아닙니다.</p></article></section>
-<section id="private" hidden><h2>구조대 전용 · 합성 인원</h2><section class="metrics"><article class="card"><small>초기 인원</small><strong id="total">—</strong></article><article class="card"><small>출구 도착</small><strong id="evacuated">—</strong></article><article class="card"><small>잔류</small><strong id="remaining">—</strong></article><article class="card"><small>통로 대기</small><strong id="queued">—</strong></article></section><article class="card"><h2>구역별 잔류 정보</h2><p>마지막 도착 구역 기준이며, 이동 중 인원은 별도로 표시합니다. 저장 기록 보기에서는 표시된 저장 시각의 인원입니다. 기록을 읽지 못하면 UNKNOWN입니다.</p><div id="occupants"></div></article></section>
+<section id="controls" class="card" hidden><div class="buttons"><button data-action="step" data-en="+1 s">+1초</button><button data-action="advance_30" data-en="+30 s">+30초</button><button data-action="resume" data-en="Run">자동 진행</button><button data-action="pause" data-en="Pause">일시정지</button><button data-action="stop_display_c" data-en="Stop device C">장치 C 중지</button><button data-action="reset" data-en="Reset">초기화</button></div><p id="runtime" data-en="Checking simulator status">처리 상태 확인 중</p><p data-en="The fire engine advances as messages and ACKs arrive. Guidance expires 30 seconds after you pause.">원본 엔진의 시간을 진행합니다. 통신·ACK 완료를 기다리므로 화면 배속은 달라질 수 있습니다. 일시정지 후 30초가 지나면 안내가 만료됩니다.</p></section>
+<section class="grid"><article class="card map-card">
+<div class="toolbar">
+  <div><h2 data-en="Building View">건물 보기</h2><p data-en="Layout, distances and capacities are assumed.">배치·길이·수용 인원은 측정되지 않은 가정값입니다.</p></div>
+  <div class="toolbar-controls">
+    <label><span data-en="View">화면</span> <select id="render-mode"><option value="3d" data-en="3D building">3D 건물</option><option value="2d" data-en="2D floor plan">2D 평면</option><option value="schematic" data-en="Node diagram">노드 모식도</option></select></label>
+    <label><span data-en="Floor">층</span> <select id="floor"></select></label>
+    <label><span data-en="Mode">보기</span> <select id="mode"><option value="fixed" data-en="Fixed-origin guidance">고정 위치 안내</option><option id="moving-option" value="moving" hidden data-en="Simulated resident movement">가상 주민 이동</option></select></label>
+    <button id="view-reset" type="button" class="secondary" data-en="Reset camera">시점 초기화</button>
+  </div>
 </div>
-<footer>원본 화재 모델 유지 · 실제 oneM2M 통신 · 가정된 보행·정체 모델 · 실제 안전 평가용 아님</footer>
+<div id="floor-tabs" class="floor-tabs" role="group" aria-label="층 바로가기 (층별 남은 인원과 화재 표시)" data-en-aria-label="Floor shortcuts showing occupants remaining and fire activity per floor"></div>
+<p id="replay-banner" class="replay-banner" role="status" hidden></p>
+<div id="scene" class="scene">
+  <canvas id="scene-canvas" tabindex="0" role="img" aria-label="합성 건물의 대피 상태. 드래그로 회전 또는 이동, 휠로 확대, 클릭하면 구역 정보" data-en-aria-label="Simulated evacuation. Drag to rotate or pan, scroll to zoom, and click a zone for details."></canvas>
+  <div id="scene-labels" aria-hidden="true"></div>
+</div>
+<p id="scene-info" class="scene-info" role="status"></p>
+<svg id="map" viewBox="0 0 840 440" role="img" aria-label="선택한 층의 합성 구역과 대피 상태" data-en-aria-label="Simulated zones and evacuation state on the selected floor"></svg>
+<p id="legend" class="legend" data-en="Green — route · orange — fire · gray — smoke · red — blocked · dark red — collapse · blue — origin and selected resident">초록: 계산 경로 · 주황: 화재 · 회색: 연기 · 빨강: 차단 · 진한 빨강: 붕괴 · 파랑: 기준 위치와 선택한 가상 주민</p>
+<p id="scene-help" class="legend" data-en="Drag to rotate in 3D or pan in 2D. Scroll to zoom. Click a zone to open its floor. Upper floors are translucent. You can also use the arrow and +/− keys.">3D: 드래그 회전 · 휠 확대 · 클릭하면 구역 정보를 보고 그 층으로 이동 · 선택한 층보다 위는 반투명 · 2D: 드래그 이동 · 키보드 화살표와 +/− 사용 가능</p>
+<section id="timeline" class="timeline-panel" aria-label="대피 타임라인" data-en-aria-label="Evacuation Timeline">
+  <div class="tl-head">
+    <div><h3 data-en="Evacuation Timeline">대피 타임라인</h3><p id="tl-caption" class="tl-caption"></p></div>
+    <div class="tl-time"><strong id="tl-current">--:--</strong> / <span id="tl-end">--:--</span></div>
+  </div>
+  <p id="tl-resident-note" class="tl-notice" hidden data-en="Sign out and sign back in as a responder to view the resident timeline and individual simulated positions.">주민 이동 재생과 타임라인은 구조대 로그인에서만 볼 수 있습니다. 주민 개개인의 위치는 구조대 전용 정보라서 주민 화면에는 보내지 않습니다. 로그아웃한 뒤 역할을 구조대로 골라 다시 접속하세요.</p>
+  <div id="tl-body">
+  <p id="tl-empty" class="tl-notice" data-en="No frames recorded yet. Select Reset, then Run to start recording. After a few seconds, select Play recording to review from the start.">아직 기록된 장면이 없습니다. 위쪽 버튼에서 초기화 → 자동 진행을 누르면 대피가 시작되고, 장면이 여기에 기록됩니다. 몇 초 기다린 뒤 ▶ 기록 재생으로 처음부터 다시 볼 수 있습니다.</p>
+  <div class="tl-controls">
+    <button id="tl-start" type="button" class="secondary" aria-label="기록 처음으로" data-en-aria-label="First recorded frame">⏮</button>
+    <button id="tl-back" type="button" class="secondary" aria-label="이전 장면" data-en-aria-label="Previous frame">‹</button>
+    <button id="tl-play" type="button" class="tl-play" data-en="▶ Play recording">▶ 기록 재생</button>
+    <button id="tl-next" type="button" class="secondary" aria-label="다음 장면" data-en-aria-label="Next frame">›</button>
+    <button id="tl-live" type="button" class="tl-live active" aria-pressed="true" data-en="● Live">● 실시간</button>
+    <label><span data-en="Playback speed">재생 속도</span> <select id="tl-speed"><option value="1" data-en="1×">1배</option><option value="2" data-en="2×">2배</option><option value="5" selected data-en="5×">5배</option><option value="10" data-en="10×">10배</option><option value="30" data-en="30×">30배</option></select></label>
+    <label class="tl-check"><input id="show-crowd" type="checkbox" checked> <span data-en="Show all residents">주민 모두 표시</span></label>
+    <label class="tl-check"><input id="tl-follow" type="checkbox"> <span data-en="Follow the selected resident&#x27;s floor">선택한 주민 층 따라가기</span></label>
+  </div>
+  <canvas id="tl-chart" class="tl-chart" role="img" aria-label="시간에 따른 주민 상태 변화와 사건 표시. 누르거나 끌면 그 시각으로 이동" data-en-aria-label="Resident states and events over time. Click or drag to seek."></canvas>
+  <input id="tl-range" class="tl-range" type="range" min="0" max="1" value="0" step="1" aria-label="재생 위치 (모의 초)" data-en-aria-label="Playback position in simulated seconds" disabled>
+  <div id="tl-stats" class="tl-stats"></div>
+  <p class="tl-legend">
+    <span><i class="tl-dot status-EVACUATED"></i><span data-en="Evacuated">대피 완료</span></span><span><i class="tl-dot status-MOVING"></i><span data-en="Moving">이동 중</span></span>
+    <span><i class="tl-dot status-QUEUED"></i><span data-en="Queued">통로 정체</span></span><span><i class="tl-dot status-WAITING"></i><span data-en="Awaiting departure">출발 전 대기</span></span>
+    <span><i class="tl-dot status-NO_ROUTE"></i><span data-en="No route">경로 없음</span></span><span><i class="tl-dot status-BLOCKED_IN_TRANSIT"></i><span data-en="Blocked in transit">이동 중 고립</span></span>
+    <span class="tl-legend-note" data-en="▼ Event markers">▼ 위쪽 표시: 사건</span>
+  </p>
+  <h4 class="tl-events-title"><span data-en="Event Log">사건 기록</span> <small data-en="Select an event to jump to its time and floor">누르면 그 시각과 층으로 이동합니다</small></h4>
+  <ol id="tl-events" class="tl-events"></ol>
+  </div>
+</section>
+</article>
+<article class="card"><h2 id="detail-title" data-en="Latest guidance from the fixed origin">고정 위치의 최신 안내</h2><div id="fixed-detail"></div><div id="moving-detail" hidden><label for="person" data-en="Select a simulated resident">가상 주민 선택</label><select id="person" disabled><option data-en="Checking resident records">주민 기록을 확인하고 있습니다</option></select><p id="person-state"></p><p data-en="The marker shows simulated progress between zones. Saved frames show the resident&#x27;s position at the recorded time.">점은 구역·구역 사이의 모의 진행 상태입니다. 저장 기록을 표시할 때는 저장 당시 위치이며, 실제 위치 측정이 아닙니다.</p></div><div id="zone-picker"><label for="my-zone" data-en="Select your room">내 위치(방) 선택</label><select id="my-zone"><option value="" data-en="Use the fixed origin">선택 안 함 · 고정 출발점 안내</option></select><p id="zone-state" role="status"></p><p class="hint" data-en="Your room selection stays in this browser.">선택한 위치는 이 브라우저에만 저장되며 서버나 CSE에 기록하지 않습니다.</p></div><ol id="path"></ol><p data-en="Three simulated signs acknowledge the shared route for the fixed origin.">3개 가상 안내 장치는 고정 출발점의 공통 안내를 확인합니다. 모든 주민의 개별 경로를 표시하는 장치라는 뜻은 아닙니다.</p></article></section>
+<section id="private" hidden><h2 data-en="Responder View · Simulated Occupants">구조대 전용 · 합성 인원</h2>
+<section class="metrics"><article class="card"><small data-en="Starting population">초기 인원</small><strong id="total">—</strong></article><article class="card"><small data-en="Reached an exit">출구 도착</small><strong id="evacuated">—</strong></article><article class="card"><small data-en="Remaining">잔류</small><strong id="remaining">—</strong></article><article class="card"><small data-en="Queued">통로 대기</small><strong id="queued">—</strong></article></section><article class="card"><h2 data-en="Occupants Remaining by Zone">구역별 잔류 정보</h2><p data-en="Counts use the last reached zone. People in transit are listed separately. Saved counts reflect the recorded time. Unavailable counts show UNKNOWN.">마지막 도착 구역 기준이며, 이동 중 인원은 별도로 표시합니다. 저장 기록 보기에서는 표시된 저장 시각의 인원입니다. 기록을 읽지 못하면 UNKNOWN입니다.</p><div id="occupants"></div></article><article class="card" id="estimate-card"><h2 data-en="Occupancy Estimates · Priority Zones">재실 추정 · 우선 확인 구역</h2><p data-en="The MEC service estimates occupancy from simulated anonymous passage counts with 5% assumed missing, and simulated Wi-Fi/BLE counts every 10 seconds. Someone without a device may be less likely to appear in the estimate. Blocked and hazardous zones rank first within each likelihood group.">MEC 재실 추정 서비스가 익명 출입 통과 기록(모의, 5% 누락 가정)으로 사전 확률을 정하고, 익명 Wi-Fi/BLE 기기 수 스캔(모의, 10초 주기)으로 보정한 재실 확률입니다. 확정 인원이 아니며 실제 사람이나 기기를 추적한 결과가 아닙니다. 기기를 지니지 않은 사람은 확률이 낮게 나올 수 있습니다. 같은 등급 안에서는 차단·위험 구역을 먼저 표시합니다.</p><p id="estimate-summary" role="status" data-en="Checking occupancy estimates.">재실 추정을 확인하고 있습니다.</p><div id="estimate-table"></div></article></section>
+</div>
+</div>
+<footer data-en="Original fire model · live oneM2M communication · assumed movement and queues · simulation use only">원본 화재 모델 유지 · 실제 oneM2M 통신 · 가정된 보행·정체 모델 · 실제 안전 평가용 아님</footer>
 </main></body></html>

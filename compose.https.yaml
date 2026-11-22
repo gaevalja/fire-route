@@ -1,0 +1,16 @@
+# Opt-in overlay for the selected dashboard; main HTTP profile stays available.
+services:
+  scenario-app:
+    environment:
+      APP_PUBLIC_ORIGIN: https://127.0.0.1:${SECURE_HOST_PORT:-3443}
+      APP_TLS_CERT: /run/fire-route/tls/server.crt
+      APP_TLS_KEY: /run/fire-route/tls/server.key
+    volumes:
+      - ./.runtime/tls/server.crt:/run/fire-route/tls/server.crt:ro
+      - ./.runtime/tls/server.key:/run/fire-route/tls/server.key:ro
+      - ./.runtime/tls/ca.crt:/run/fire-route/tls/ca.crt:ro
+    # !override is supported by Compose >=2.24.4; check installed CLI first.
+    ports: !override
+      - "127.0.0.1:${SECURE_HOST_PORT:-3443}:3000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import ssl,urllib.request; urllib.request.urlopen('https://127.0.0.1:3000/healthz',context=ssl.create_default_context(cafile='/run/fire-route/tls/ca.crt'),timeout=3)"]

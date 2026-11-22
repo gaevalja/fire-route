@@ -13,11 +13,24 @@ AE_ROLES = {
 }
 
 
+ACCESS_LABEL = "sensorType:access-passage"
+PRESENCE_LABEL = "sensorType:presence-scan"
+
+
 def bootstrap(client: CSEClient, base: str, namespace: str, callback: str, retention_seconds: int,
               *, decision_policies: bool = False, display_callbacks: dict[str, str] | None = None,
-              dashboard: bool = False) -> dict:
+              dashboard: bool = False, access_sensing: bool = False, access_readers: list[str] | None = None) -> dict:
     if not re.fullmatch(r"[a-z][a-z0-9_-]{2,47}", namespace):
         raise ValueError("Invalid run namespace")
+    if access_sensing and not dashboard:
+        raise ValueError("Access sensing extends the dashboard profile")
+    access_readers = list(access_readers or [])
+    if any(not isinstance(r, str) or not r for r in access_readers):
+        raise ValueError("Invalid access reader AE-ID")
+    roles = dict(AE_ROLES)
+    if access_sensing:
+        roles["access-gateway"] = "AccessGatewayAE"
+        roles["presence-scanner"] = "PresenceScannerAE"
     parent = "/" + base
     expiry = (datetime.now(timezone.utc) + timedelta(seconds=retention_seconds)).strftime("%Y%m%dT%H%M%S")
     labels = ["fire-route", "namespace:" + namespace]
@@ -25,7 +38,7 @@ def bootstrap(client: CSEClient, base: str, namespace: str, callback: str, reten
     if display_callbacks and set(display_callbacks) != {"display-a", "display-b", "display-c"}:
         raise ValueError("All three display callbacks are required")
     actors = {}
-    for role, suffix in AE_ROLES.items():
+    for role, suffix in roles.items():
         attrs = {"rn": namespace + "__" + suffix, "api": "Nfire-route.p0", "rr": role == "controller" or role in display_callbacks,
                  "srv": [client.release], "lbl": labels + ["role:" + role], "et": expiry}
         if role == "controller":
@@ -50,7 +63,9 @@ def bootstrap(client: CSEClient, base: str, namespace: str, callback: str, reten
     decision_acps = {}
     if decision_policies or dashboard:
         readers_by_name={"hazards": ["responder"], "routes": ["resident", "responder"]}
-        if dashboard:readers_by_name.update(status=['resident','responder'],diagnostics=['responder'])
+        if dashboard:readers_by_name.update({'status':['resident','responder'],'diagnostics':['responder'],
+                                             'zone-routes':['resident','responder']})
+        if access_sensing:readers_by_name['occupancy-estimates']=['responder']
         for name, readers in readers_by_name.items():
             resource = client.ensure(parent, 1, {
                 "rn": namespace + "__" + name + "-policy", "lbl": labels, "et": expiry,
@@ -64,7 +79,11 @@ def bootstrap(client: CSEClient, base: str, namespace: str, callback: str, reten
     names_by_role={"sensor": ["telemetry"], "controller": ["hazards", "routes"],
                         "display-a": ["commands", "acks"], "display-b": ["commands", "acks"],
                         "display-c": ["commands", "acks"], "occupancy": ["observations"]}
-    if dashboard:names_by_role['controller']+=['status','diagnostics']
+    if dashboard:names_by_role['controller']+=['status','diagnostics','zone-routes']
+    if access_sensing:
+        names_by_role['controller'].append('occupancy-estimates')
+        names_by_role['access-gateway'] = ['passages']
+        names_by_role['presence-scanner'] = ['scans']
     for role, names in names_by_role.items():
         for name in names:
             attrs = {"rn": name, "lbl": labels, "mni": 1000, "et": expiry}
@@ -94,6 +113,19 @@ def bootstrap(client: CSEClient, base: str, namespace: str, callback: str, reten
                                  {'acor':[client.originator],'acop':63}]},
                     'pvs':{'acr':[{'acor':[client.originator],'acop':63}]}})
                 attrs['acpi']=[occupancy_policy['ri']]
+            elif role in ('access-gateway','presence-scanner'):
+                # Anonymous passage/device-count records: the sensor AE writes; controller,
+                # responder and the project IPE read them. Residents are not granted any access.
+                readers=[actors['controller']['ae_id'],actors['responder']['ae_id']]+access_readers
+                kind,label=('access','access-passages') if role=='access-gateway' else ('presence','presence-scans')
+                sensor_policy=client.ensure(parent,1,{
+                    'rn':namespace+'__'+kind+'-policy','lbl':labels,'et':expiry,
+                    'pv':{'acr':[{'acor':[actors[role]['ae_id']],'acop':3},
+                                 {'acor':readers,'acop':2},
+                                 {'acor':[client.originator],'acop':63}]},
+                    'pvs':{'acr':[{'acor':[client.originator],'acop':63}]}})
+                attrs['acpi']=[sensor_policy['ri']]
+                attrs['lbl']=labels+[ACCESS_LABEL if kind=='access' else PRESENCE_LABEL,label+':'+namespace]
             resource = client.ensure(actors[role]["path"], 3, attrs)
             containers[role + "/" + name] = {"ri": resource["ri"], "path": actors[role]["path"] + "/" + name}
     return {"actors": actors, "containers": containers, "telemetry_policy_ri": policy["ri"], "namespace": namespace}
