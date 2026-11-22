@@ -1,6 +1,9 @@
 name: fire-route
 services:
   cse:
+    # Candidate graceful interrupt path; actual stop/restart gate must verify it.
+    init: true
+    stop_signal: SIGINT
     stop_grace_period: 30s
     build:
       context: .
@@ -26,10 +29,11 @@ services:
       cse:
         condition: service_healthy
     environment: &core_environment
-      CSE_BASE_URL: http://cse:8080
+      FIREROUTE_PROFILE: ${FIREROUTE_PROFILE:-local}
+      CSE_BASE_URL: ${CSE_CONTAINER_BASE_URL:-http://cse:8080}
       CSE_BASE_RESOURCE: fire-route-dev
       CSE_RELEASE: "4"
-      CSE_ORIGINATOR: CAdmin
+      CSE_ORIGINATOR: ${CSE_ORIGINATOR:-CAdmin}
       CSE_MODE: real
       MEC_MODE: unavailable
       DEMO_MODE: simulator
@@ -85,9 +89,107 @@ services:
       - ./evidence:/app/evidence
       - cse-metadata:/metadata:ro
       - ./.runtime/fire-evac-trace.jsonl:/run/fire-route/scenario.jsonl:ro
+  risk-worker:
+    profiles: ["analysis"]
+    build: *core_build
+    entrypoint: ["python", "-m", "mec.risk.worker"]
+    network_mode: none
+    read_only: true
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    stdin_open: true
+  stability-probe:
+    profiles: ["stability"]
+    build: *core_build
+    entrypoint: ["python", "-m", "tests.integration.cse_persistence"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    environment:
+      <<: *core_environment
+      # This test stops this Compose CSE; never probe an external override.
+      CSE_BASE_URL: http://cse:8080
+      CSE_BASE_RESOURCE: fire-route-dev
+      CSE_RELEASE: "4"
+      CSE_ORIGINATOR: CAdmin
+    volumes:
+      - ./evidence:/app/evidence
+      - cse-metadata:/metadata:ro
+  scenario-hazards:
+    profiles: ["hazards"]
+    build: *core_build
+    entrypoint: ["python", "-m", "backend.scenario_hazards"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    depends_on:
+      cse:
+        condition: service_healthy
+    environment:
+      <<: *core_environment
+      NOTIFICATION_PUBLIC_URL: http://scenario-hazards:8000/onem2m/notify
+      SCENARIO_TRACE: /run/fire-route/hazards.jsonl
+    volumes:
+      - ./evidence:/app/evidence
+      - cse-metadata:/metadata:ro
+      - ./.runtime/fire-evac-hazards.jsonl:/run/fire-route/hazards.jsonl:ro
+  scenario-faults:
+    profiles: ["faults"]
+    build: *core_build
+    entrypoint: ["python", "-m", "tests.integration.selected_faults"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    depends_on:
+      cse:
+        condition: service_healthy
+    environment:
+      <<: *core_environment
+      NOTIFICATION_PUBLIC_URL: http://scenario-faults:8000/onem2m/notify
+      SCENARIO_TRACE: /run/fire-route/faults.jsonl
+      CSE_BASE_URL: http://cse:8080
+      CSE_BASE_RESOURCE: fire-route-dev
+      CSE_RELEASE: "4"
+      CSE_ORIGINATOR: CAdmin
+    volumes:
+      - ./evidence:/app/evidence
+      - cse-metadata:/metadata:ro
+      - ./.runtime/fire-evac-faults.jsonl:/run/fire-route/faults.jsonl:ro
+  scenario-recovery:
+    profiles: ["recovery"]
+    build: *core_build
+    entrypoint: ["python", "-m", "tests.integration.selected_recovery"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    environment:
+      <<: *core_environment
+      CSE_BASE_URL: http://cse:8080
+      CSE_BASE_RESOURCE: fire-route-dev
+      CSE_RELEASE: "4"
+      CSE_ORIGINATOR: CAdmin
+      NOTIFICATION_PUBLIC_URL: http://scenario-recovery:8000/onem2m/notify
+      SCENARIO_TRACE: /run/fire-route/recovery.jsonl
+    volumes:
+      - ./evidence:/app/evidence
+      - cse-metadata:/metadata:ro
+      - ./.runtime/fire-evac-recovery.jsonl:/run/fire-route/recovery.jsonl:ro
+  scenario-latency:
+    profiles: ["latency"]
+    build: *core_build
+    entrypoint: ["python", "-m", "tests.integration.selected_latency"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    depends_on:
+      cse:
+        condition: service_healthy
+    environment:
+      <<: *core_environment
+      CSE_BASE_URL: http://cse:8080
+      CSE_BASE_RESOURCE: fire-route-dev
+      CSE_RELEASE: "4"
+      CSE_ORIGINATOR: CAdmin
+      NOTIFICATION_PUBLIC_URL: http://scenario-latency:8000/onem2m/notify
+      SCENARIO_TRACE: /run/fire-route/latency.jsonl
+    volumes:
+      - ./evidence:/app/evidence
+      - cse-metadata:/metadata:ro
+      - ./.runtime/fire-evac-latency.jsonl:/run/fire-route/latency.jsonl:ro
   scenario-app:
     profiles: ["scenario-demo"]
-    build: *core_build
+    build:
+      <<: *core_build
+      args: {WITH_POLICY_COMPARISON: "1"}
     entrypoint: ["python", "-m", "backend.scenario_demo"]
     stop_grace_period: 30s
     user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
@@ -98,6 +200,8 @@ services:
       <<: *core_environment
       NOTIFICATION_PUBLIC_URL: http://scenario-app:8000/onem2m/notify
       SCENARIO_TRACE: /run/fire-route/scenario.jsonl
+      FIREROUTE_POLICY_COMPARISON: "1"
+      FIRE_EVAC_RUNS_DIR: /run/fire-route/model-replay-runs
       APP_AUTH_FILE: /run/fire-route/auth.json
       APP_PUBLIC_ORIGIN: http://127.0.0.1:${SCENARIO_HOST_PORT:-3001}
       APP_BIND_HOST: 0.0.0.0
@@ -109,6 +213,11 @@ services:
       - cse-metadata:/metadata:ro
       - ./.runtime/auth.json:/run/fire-route/auth.json:ro
       - ./.runtime/fire-evac-trace.jsonl:/run/fire-route/scenario.jsonl:ro
+      - type: bind
+        source: "${FIRE_EVAC_RUNS_DIR:-./simulator/fire_policy/assets}"
+        target: /run/fire-route/model-replay-runs
+        read_only: true
+        bind: {create_host_path: false}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/healthz', timeout=2).close()"]
       interval: 3s

@@ -1,4 +1,4 @@
-"""Current-state contract for the unchanged fire_evac engine; no fake CSE."""
+"""Current-state contract for the versioned fire_evac engine."""
 from dataclasses import dataclass
 import hashlib
 import json
@@ -13,7 +13,7 @@ from simulator.commands import utc_time
 from simulator.events import ContractError, utc_now
 
 ROOT = Path(__file__).resolve().parents[1]
-PROFILE = 'fire_evac_10f_v1'
+PROFILE = 'fire_evac_10f_0015'
 
 
 def zone_metadata():
@@ -85,6 +85,8 @@ def validate_raw(data, expected_hash):
         seen[node] = zone
     if set(seen) != set(ZONES) or sum(z['collapsed'] for z in seen.values()) > 2:
         raise ContractError('Incomplete zones or collapse cap exceeded')
+    if seen['F11-ROOF']['smoke_index'] > 30:
+        raise ContractError('0015 roof smoke cap differs')
     for node,zone in seen.items():
         if ZONES[node]['kind'] == 'corridor':
             floor = ZONES[node]['floor']

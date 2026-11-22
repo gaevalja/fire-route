@@ -1,5 +1,13 @@
 # FireRoute environments and configuration
 
+The separate [MEC services profile](MEC_SERVICES.md) now adds official controller/CouchDB/InfluxDB, a private authenticated provider/project IPE and optional loopback-3002 dashboard. Implementation is tested; actual new startup is blocked by agent Docker permissions. Only its platform API 8091 and optional dashboard 3002 are published. The earlier component profile below retains port 8090.
+
+Local MEC work is explicitly requested; video is outside the agent task. Both official STF_685 sources are acquired/locked and the reviewed MEC011 Go component has a separate [LOCAL_MEC](LOCAL_MEC.md) build/runtime profile. It uses Go 1.25.0 only in a builder image, private Redis 6.2.24, the existing Python image for health checking and a separate actual CSE. Only the MEC API's loopback port 8090 is published. No host Go install, Kubernetes/system installer, OAuth account or new Python dependency is required for this component slice. The user now builds/starts this profile and passes seven native API/CSE checks at 20261116-114543Z-372e392f. Docker ps independently observes three healthy services. Agent Docker lifecycle access remains denied; that restriction does not invalidate the recorded user execution. Full app-manager/VM/IPE deployment is outside this verified component slice.
+
+Latest local execution: see [LOCAL_ACCEPTANCE](LOCAL_ACCEPTANCE.md) for Chrome/CDP pipe, optional OpenSSL HTTPS and FFmpeg capture requirements, isolated MQTT/discovery and clean-commit acceptance. The main app still has no third-party runtime dependency; only the isolated standards image adds paho-mqtt==2.1.0 and a private broker. Chrome sandbox and actual Docker/network access are required for their real gates. Agent docker ps can observe the existing demo, but Docker exec/Compose API and AF_INET creation are denied; browser/API integration is not executable merely because containers are visible.
+
+Actual user-terminal make verify-clean at evidence/20261116-044349Z-18300187/ passes all 19 steps from clean efc65cb, including Chrome 157.0.8103.78 HTTP/HTTPS flows and TLS 1.3. This supersedes the earlier agent-only runtime blockers for that recorded local environment; it is not remote CI/different-machine proof. Both browsers select PRIVATE_KOREAN_FONT and inspected HTTP/mobile PNGs show readable Hangul. The earlier missing glyphs are resolved in those samples; inspect any new recording before publication because DOM text/layout assertions alone cannot establish readable output. The existing Noto font is copied only into a disposable Chrome profile; no font binary, system font installation or trust-store change is published/performed.
+
 ## 1. Environment roles
 
 | Environment | Role | Boundary |
@@ -64,3 +72,17 @@ Store actual values only in ignored .env/secrets outside Git. Separate local exa
 - Keep raw logs/evidence private until sanitized. .gitignore already ignores .env and evidence/*; P4 must explicitly curate publishable evidence without broadly unignoring secret-bearing runs.
 
 See TEAM_WORKFLOW.md for source integration and DEPLOYMENT.md for access/installation gates.
+
+## Natural-hazard verification profile (2026-11-14)
+
+make hazard-trace exports an ignored .runtime/fire-evac-hazards.jsonl from the unchanged source, with HAZARD_SEED=59, HAZARD_WIND=5 and HAZARD_SECONDS=900 by default. It does not overwrite .runtime/fire-evac-trace.jsonl used by the interactive demo. make hazard-preview is offline only; make p1-hazards runs scenario-hazards on the existing isolated real-CSE Compose network, callback ports 8000–8003 internally, with no new host port or credentials. The gate recreates its containers to refresh the trace mount and stops its stack afterward. Run it serially with other profiles; CSE volumes/evidence are retained. Current agent host Python 3.10.12 and denied Docker API access cannot execute the real profile; use the user's Python 3.12 Compose environment. No new dependency or MEC deployment is added.
+
+## Current profile policy and local lifecycle tools (ADR-019)
+
+Keep WSL2/Docker/ACME as the development environment. A shared x86 server or ETSILabs account is not required for current Phases 1/2. Hosted login/namespace/admin descriptions are user supplied and unverified. No Hosted connection/deployment is performed until a separate Phase 3 instruction; optional Local Sandbox installation is not a prerequisite.
+
+FIREROUTE_PROFILE=local is the only active application profile. The inactive hosted_pending planning example is rejected by Settings before connection setup; it cannot silently become a working Hosted client by filling blank URLs. Host CSE_BASE_URL and Docker CSE_CONTAINER_BASE_URL are separate. CSE_ORIGINATOR is an external header identity setting, not complete authentication. MEC_BASE_URL/MEC_SERVICE_API/MEC_ACCESS_TOKEN remain reserved settings without an API client or verified authentication scheme. Use ignored .env/credential files, never Git. Examples are infra/profiles/local.env.example and hosted.env.example.
+
+The CSE launcher creates/reuses /data/fire-route.secret with 0600 permissions and stages the internal key into its managed runtime configuration, leaving the source and prior managed files intact. It refuses symlink/world-readable/invalid keys. No key value is logged. This startup change is not yet actual-runtime verified; earlier CSE PASS records retain their old config hash. make diagnose-cse observes only; make local-stability intentionally stop/starts the local CSE while preserving volumes and checks actual marker persistence, stable config and shutdown evidence. No stop signal is changed on inference alone.
+
+The analysis profile executes python -m mec.risk.worker with stdin JSONL ScenarioFrame input and stdout application-result envelopes, no network or data/credential mounts, and a read-only filesystem. Explicit assumptions are supplied by --assumptions/RISK_ASSUMPTIONS_FILE only from a validated local file; this is a portable component, not a verified Hosted deployment. Consumer adapters must honor REJECTED/UNKNOWN, duplicate/no-fresh-result and source UTC/TTL, and enforce responder privacy on per-person output.

@@ -1,0 +1,50 @@
+# Official ETSI MEC011 component, compiled from locked unmodified Git objects.
+# This is not the complete Kubernetes Sandbox/UI, orchestrator or an Option C VM.
+services:
+  mec-redis:
+    image: redis:6.2.24-bookworm
+    command: ["redis-server", "--appendonly", "yes", "--protected-mode", "no"]
+    networks:
+      mec:
+        aliases: [meep-redis-master.default.svc.cluster.local]
+    volumes:
+      - mec-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  mec-platform:
+    init: true
+    build:
+      context: .
+      dockerfile: infra/mec/Dockerfile
+      additional_contexts:
+        etsi_source: ./.runtime/mec-sandbox/runtime-build/source
+    environment:
+      MEEP_SANDBOX_NAME: fire-route-local
+      MEEP_HOST_URL: http://mec-platform
+      MEEP_SVC_PATH: /mec_app_support/v2
+    depends_on:
+      mec-redis: {condition: service_healthy}
+    networks: [mec, edge]
+    ports:
+      - "127.0.0.1:${MEC_LOCAL_PORT:-8090}:80"
+    healthcheck:
+      test: ["CMD", "python", "/opt/fire-route/mec-healthcheck.py"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    stop_grace_period: 30s
+  mec-check:
+    depends_on:
+      mec-cse: {condition: service_healthy}
+      mec-platform: {condition: service_healthy}
+    networks: !override [backend, mec]
+    environment:
+      MEC_LOCAL_SERVICE_MGMT_URL: http://mec-platform/mec_service_mgmt/v1
+      MEC_APPLICATION_INSTANCE_ID: ""
+networks:
+  mec: {internal: true}
+volumes:
+  mec-redis-data:

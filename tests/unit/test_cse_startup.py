@@ -3,6 +3,7 @@
 These are startup adapter tests, not claims that an actual CSE has started.
 """
 import importlib.util
+import configparser
 from pathlib import Path
 import tempfile
 import unittest
@@ -73,3 +74,40 @@ class CSEStartupTests(unittest.TestCase):
         self.assertTrue(config.getboolean("console", "headless"))
         target = entrypoint.stage_config(self.source, self.runtime)
         self.assertNotIn("--headless", entrypoint.command_for(target, self.runtime))
+
+    def test_private_secret_is_persistent_and_distinct_per_volume(self):
+        value=entrypoint.persistent_secret(self.runtime)
+        self.assertEqual(len(value),64)
+        self.assertEqual(entrypoint.persistent_secret(self.runtime),value)
+        self.assertNotEqual(entrypoint.persistent_secret(self.root/'other'),value)
+        self.assertEqual((self.runtime/'fire-route.secret').stat().st_mode & 0o777,0o600)
+
+    def test_secret_is_applied_only_to_staged_config_and_remains_stable(self):
+        before=self.source.read_bytes();value=entrypoint.persistent_secret(self.runtime)
+        target=entrypoint.stage_config(self.source,self.runtime,secret=value)
+        parser=configparser.ConfigParser(interpolation=None);parser.read(target)
+        self.assertEqual(parser.get('basic.config','secret'),value)
+        self.assertEqual(self.source.read_bytes(),before)
+        self.assertEqual(entrypoint.stage_config(self.source,self.runtime,secret=entrypoint.persistent_secret(self.runtime)),target)
+
+    def test_missing_or_invalid_existing_secret_is_not_silently_rotated(self):
+        for value in ['', 'private-fixture-value', 'a'*66]:
+            path=self.runtime/'fire-route.secret';self.runtime.mkdir(exist_ok=True)
+            path.write_text(value);path.chmod(0o600)
+            with self.assertRaises(RuntimeError) as error:entrypoint.persistent_secret(self.runtime)
+            self.assertNotIn('private-fixture-value',str(error.exception))
+            self.assertEqual(path.read_text(),value)
+
+    def test_world_readable_or_symlink_secret_is_rejected(self):
+        entrypoint.persistent_secret(self.runtime)
+        path=self.runtime/'fire-route.secret';path.chmod(0o644)
+        with self.assertRaises(RuntimeError):entrypoint.persistent_secret(self.runtime)
+        path.unlink();outside=self.root/'other-secret';outside.write_text('f'*64);outside.chmod(0o600)
+        path.symlink_to(outside)
+        with self.assertRaises(RuntimeError):entrypoint.persistent_secret(self.runtime)
+        self.assertEqual(outside.read_text(),'f'*64)
+
+    def test_invalid_secret_argument_does_not_echo_value(self):
+        with self.assertRaises(ValueError) as error:
+            entrypoint.stage_config(self.source,self.runtime,secret='private-fixture-value')
+        self.assertNotIn('private-fixture-value',str(error.exception))

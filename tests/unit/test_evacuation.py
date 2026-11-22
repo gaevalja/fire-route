@@ -50,6 +50,11 @@ class FrameContractTests(unittest.TestCase):
         self.assertEqual(ScenarioFrame.parse(f.to_dict()),f)
         self.assertNotIn('_minuteTarget',f.to_dict())
 
+    def test_0015_roof_cap_applies_even_when_the_roof_is_burning(self):
+        with self.assertRaises(ContractError):
+            frame(changes={'F11-ROOF':{'fire_index':70,'smoke_index':31}})
+        self.assertEqual(frame(changes={'F11-ROOF':{'fire_index':70,'smoke_index':30}}).data['profile_id'],PROFILE)
+
     def test_unknown_future_fields_and_missing_zones_rejected(self):
         for mutate in [lambda d:d.update(_minuteTarget={}),lambda d:d['zones'].pop(),
                        lambda d:d['zones'].append(dict(d['zones'][0]))]:
@@ -125,6 +130,19 @@ class NavigationTests(unittest.TestCase):
         result=self.nav.route('F7-R3')
         self.assertEqual(result['status'],'NO_VERIFIED_ROUTE');self.assertIsNone(result['target_exit'])
         self.assertEqual(result['path'],[])
+
+    def test_route_excludes_fire_45_smoke_60_and_collapse(self):
+        policy=load_assumptions()
+        self.assertEqual((policy['fire_block_index'],policy['smoke_block_index']),(45,60))
+        below={'F7-SA':{'fire_index':44.9},'F7-SB':{'fire_index':30,'smoke_index':59.9}}
+        self.nav.update(frame(changes=below))
+        self.assertFalse({'F7-SA','F7-SB'}&self.nav.blocked)
+        at={'F7-SA':{'fire_index':45},'F7-SB':{'fire_index':30,'smoke_index':60},'F7-R1':{'collapsed':True}}
+        self.nav.update(frame(changes=at))
+        self.assertEqual(self.nav.blocked,{'F7-SA','F7-SB','F7-R1'})
+        self.assertEqual(self.nav.route('F7-R3')['status'],'NO_VERIFIED_ROUTE')
+        self.nav.update(frame(changes={'F7-SA':{'fire_index':45}}))
+        self.assertNotIn('F7-SA',self.nav.route('F7-R3')['path'])
 
     def test_load_changes_exit_choice(self):
         result=self.nav.route('F1-R1',occupied={tuple(sorted(('F1-L','EXIT_A'))):2})
@@ -285,6 +303,14 @@ class SelectedViewUnitTests(unittest.TestCase):
         result=self.app.view('inc-unit','responder',diagnostics=True)
         self.assertEqual(result['guidance_status'],'STALE');self.assertIsNone(result['route'])
         for key in ['population','residents','occupants']:self.assertNotIn(key,result)
+
+    def test_stale_committed_observation_expires_even_with_malformed_latest_telemetry(self):
+        self.payloads['controller/status']['observed_at_utc']='2020-01-01T00:00:00Z'
+        self.payloads['sensor/telemetry']={'invalid':'synthetic input'}
+        result=self.app.view('inc-unit','responder',diagnostics=True)
+        self.assertEqual(result['guidance_status'],'STALE');self.assertIsNone(result['route'])
+        for key in ['population','residents','occupants']:self.assertNotIn(key,result)
+        self.assertEqual(self.client.retrieve.call_count,2)
 
     def test_busy_or_mismatched_frame_clears_guidance(self):
         self.app.busy=True

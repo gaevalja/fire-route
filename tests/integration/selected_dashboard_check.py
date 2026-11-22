@@ -73,7 +73,7 @@ def run():
         a=call(f'/api/v1/incidents/{incident}/resident','resident')
         b=call(f'/api/v1/incidents/{incident}/responder','responder')
         check(stage+'_correlated',a['incident_id']==b['incident_id'] and a['route_version']==b['route_version'])
-        check(stage+'_resident_private_fields_absent',not {'population','residents','occupants','hazards'}&a.keys())
+        check(stage+'_resident_private_fields_absent',not {'population','residents','occupants','hazards','comparison'}&a.keys())
         out.write(stage+'-resident-view.json',a);out.write(stage+'-responder-view.json',b)
         return a,b
     try:
@@ -87,7 +87,8 @@ def run():
         for role in ['resident','responder']:
             call('/api/v1/session',role,'POST',{'role':role,'access_code':codes[role]})
             check(role+'_session',call('/api/v1/session',role)['role']==role)
-        check('selected_static_assets','FireRoute' in call('/') and 'selectedResident' in call('/app.js'))
+        check('selected_static_assets','FireRoute' in call('/') and 'selectedResident' in call('/app.js')
+            and 'class BuildingView' in call('/building-view.mjs') and 'class FrameRecorder' in call('/timeline.mjs'))
         print(json.dumps({'test':'P1_SELECTED_DASHBOARD','phase':'RESET_NEW_INCIDENT'}),flush=True)
         before,state=fresh_scenario(call,ready)
         out.write('before-reset-status.json',before);out.write('initial-status.json',state)
@@ -97,6 +98,13 @@ def run():
         call('/api/v1/scenario','resident','POST',{'action':'step'},expect=403)
         call('/api/v1/scenario','responder','POST',{'action':'fire_a'},expect=400)
         a,b=views('initial')
+        if os.getenv('REQUIRE_MEC_RESULT')=='1':
+            check('actual_MEC_result_used',a['connections'].get('mec')==b['connections'].get('mec')=='VERIFIED_RESULT')
+            comparison=b['comparison']
+            check('verified_MEC_comparison_on_responder_view',comparison['model_id']=='FIRE_EVAC_0015'
+                and set(comparison['policies'])=={'dijkstra','ppo'}
+                and all(track['position']==comparison['start_room'] for track in comparison['policies'].values()))
+            summary.update(test='LOCAL_MEC_DASHBOARD',MEC='VERIFIED_RESULT',MEC_IPE='FIREROUTE_PROJECT_IPE_V1')
         check('initial_both_modes_available',a['simulation_second']==0 and (a.get('route') or {}).get('source_node')=='F7-R3'
             and b['population']['total']==170 and len(b['residents'])==170 and a['delivery']['ack_count']==3)
         print(json.dumps({'test':'P1_SELECTED_DASHBOARD','phase':'ADVANCE_30_SECONDS'}),flush=True)
@@ -108,7 +116,9 @@ def run():
         check('actual_group_ACKs',a['delivery']['ack_count']==3 and a['delivery']['state']=='ALL_ACKED')
         print(json.dumps({'test':'P1_SELECTED_DASHBOARD','phase':'EXPIRY_WAIT_31_SECONDS'}),flush=True)
         time.sleep(31);a,b=views('stale')
-        check('stale_clears_direction_and_positions',a['guidance_status']=='STALE' and a['route'] is None and not {'population','residents','occupants'}&b.keys())
+        if os.getenv('REQUIRE_MEC_RESULT')=='1':
+            check('expired_MEC_result_not_labeled_live',a['connections'].get('mec')==b['connections'].get('mec')=='UNKNOWN')
+        check('stale_clears_direction_and_positions',a['guidance_status']=='STALE' and a['route'] is None and not {'population','residents','occupants','comparison'}&b.keys())
         snapshot=call(f"/api/v1/incidents/{state['incident_id']}/snapshot",'responder')
         out.write('paused-historical-snapshot.json',snapshot)
         check('paused_snapshot_explicitly_historical',snapshot['snapshot_kind']=='HISTORICAL' and snapshot['is_live'] is False

@@ -1,0 +1,2 @@
+# Official Eclipse Paho client; only installed in standards test image.
+paho-mqtt==2.1.0

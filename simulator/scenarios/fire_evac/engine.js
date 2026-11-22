@@ -118,10 +118,23 @@
     return { state: next, value: next / 4294967296 };
   }
 
-  function createSimulation({ seed = Date.now(), wind = CFG.DEFAULT_WIND } = {}) {
+  function createSimulation({ seed = Date.now(), wind = CFG.DEFAULT_WIND, ignitionId = null,
+                              fireGrowthAcceleration = null,
+                              roofSmokeCap = CFG.ROOF_SMOKE_CAP } = {}) {
     const selectedWind = Number(wind);
     if (!CFG.WIND_OPTIONS.includes(selectedWind)) {
       throw new RangeError(`Wind must be one of ${CFG.WIND_OPTIONS.join(", ")} m/s`);
+    }
+    const growthRule = fireGrowthAcceleration || {
+      fullAt: CFG.FIRE_GROWTH_ACCELERATION_FULL_AT,
+      maxMultiplier: CFG.FIRE_GROWTH_MAX_MULTIPLIER
+    };
+    if (!Number.isFinite(growthRule.fullAt) || growthRule.fullAt <= 0 ||
+        !Number.isFinite(growthRule.maxMultiplier) || growthRule.maxMultiplier < 1) {
+      throw new RangeError("Fire growth acceleration must have positive fullAt and maxMultiplier >= 1");
+    }
+    if (!Number.isFinite(roofSmokeCap) || roofSmokeCap < 0 || roofSmokeCap > CFG.MAX_LEVEL) {
+      throw new RangeError(`Roof smoke cap must be in [0, ${CFG.MAX_LEVEL}]`);
     }
     const normalizedSeed = normalizeSeed(seed);
     const zones = {};
@@ -130,18 +143,24 @@
     }
     const rooms = zoneTemplates.filter((zone) => zone.type === "room");
     const draw = nextRandom(normalizedSeed);
-    const ignitionId = rooms[Math.floor(draw.value * rooms.length)].id;
-    zones[ignitionId].fire = CFG.INITIAL_FIRE;
+    const selectedIgnitionId = ignitionId == null || ignitionId === ""
+      ? rooms[Math.floor(draw.value * rooms.length)].id : String(ignitionId);
+    if (!zones[selectedIgnitionId] || zones[selectedIgnitionId].type !== "room") {
+      throw new RangeError(`Ignition must start in a room: ${selectedIgnitionId}`);
+    }
+    zones[selectedIgnitionId].fire = CFG.INITIAL_FIRE;
     return {
       minute: 0,
       second: 0,
       seed: normalizedSeed,
       wind: selectedWind,
-      ignitionId,
+      fireGrowthAcceleration: {fullAt: growthRule.fullAt, maxMultiplier: growthRule.maxMultiplier},
+      roofSmokeCap,
+      ignitionId: selectedIgnitionId,
       zones,
       ended: false,
       rngState: draw.state,
-      events: [{ minute: 0, second: 0, type: "ignition", zoneId: ignitionId, message: `${zones[ignitionId].floor}층 ${zones[ignitionId].label}에서 화재 발생` }]
+      events: [{ minute: 0, second: 0, type: "ignition", zoneId: selectedIgnitionId, message: `${zones[selectedIgnitionId].floor}층 ${zones[selectedIgnitionId].label}에서 화재 발생` }]
     };
   }
 
@@ -164,12 +183,24 @@
     return sum / CFG.CORRIDOR_SEGMENTS;
   }
 
+  function fireGrowthMultiplier(fire, rule = null) {
+    const growthRule = rule || {
+      fullAt: CFG.FIRE_GROWTH_ACCELERATION_FULL_AT,
+      maxMultiplier: CFG.FIRE_GROWTH_MAX_MULTIPLIER
+    };
+    const progress = Math.min(Math.max(fire, 0), growthRule.fullAt) / growthRule.fullAt;
+    return 1 + progress * (growthRule.maxMultiplier - 1);
+  }
+
   function calculateFire(state, zone, windFactor) {
     const neighbors = fireEdges.get(zone.id);
     let maxNeighborFire = 0;
     for (const id of neighbors) maxNeighborFire = Math.max(maxNeighborFire, state.zones[id].fire);
-    const localGrowth = zone.fire > 0 ? CFG.FIRE_GROWTH_PER_MINUTE / zone.size : 0;
-    const incoming = maxNeighborFire * CFG.FIRE_SPREAD_PER_MINUTE * windFactor / zone.size;
+    const roomResistance = zone.type === "room" && zone.id !== state.ignitionId
+      ? CFG.ROOM_FIRE_RESISTANCE_FACTOR : 1;
+    const localGrowth = zone.fire > 0
+      ? CFG.FIRE_GROWTH_PER_MINUTE * fireGrowthMultiplier(zone.fire, state.fireGrowthAcceleration) * roomResistance / zone.size : 0;
+    const incoming = maxNeighborFire * CFG.FIRE_SPREAD_PER_MINUTE * windFactor * roomResistance / zone.size;
     return clamp(zone.fire + localGrowth + incoming);
   }
 
@@ -187,7 +218,8 @@
     const smokeFromNeighborFire = maxNeighborFire * CFG.SMOKE_DIRECT_FIRE_TRANSFER * windFactor;
     const incoming = Math.max(transportedSmoke, smokeFromNeighborFire);
     const fireCap = nextFireForSmoke(nextZones, smokeId) + CFG.SMOKE_ABOVE_FIRE_CAP;
-    return Math.min(clamp(oldSmoke + generated + incoming), fireCap);
+    const locationCap = smokeId === "F11-ROOF" ? state.roofSmokeCap : CFG.MAX_LEVEL;
+    return Math.min(clamp(oldSmoke + generated + incoming), fireCap, locationCap);
   }
 
   function collapseProbability(fire) {
@@ -273,6 +305,12 @@
     return zoneTemplates.filter((zone) => zone.floor === Number(floor)).map((zone) => state.zones[zone.id]);
   }
 
+  // The evacuation viewer uses the same physical adjacency as the fire graph.
+  // Return a copy so callers cannot mutate the scenario topology.
+  function getMovementNeighbors(id) {
+    return Array.from(fireEdges.get(id) || []);
+  }
+
   function getStats(state) {
     const zones = Object.values(state.zones);
     const totalZones = zones.length;
@@ -295,7 +333,8 @@
     createSimulation,
     stepSimulation,
     getFloorZones,
+    getMovementNeighbors,
     getStats,
-    collapseProbability
+    collapseProbability, fireGrowthMultiplier
   });
 })(typeof window !== "undefined" ? window : globalThis);

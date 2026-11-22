@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "project": "FireRoute",
+  "commit": "efc65cbf7935dbbfa7fa87eb30058614630c55f7",
+  "runtime_manifest_sha256": "4d5319f108a3bc41a873cde03527a6cd9a6b0f1771d361fdbf0e5ec52817fd9d",
+  "acceptance": {
+    "source": "CLEAN_COMMIT_ARCHIVE",
+    "state": "PASS",
+    "planned": 19,
+    "unattempted": 0,
+    "cleanup_exit_code": 0,
+    "steps": [
+      {
+        "exit_code": 0,
+        "name": "unit",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "frontend",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "source-engine",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "browser-driver",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "compose",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "standards",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "CSE-core",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "routes",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "Group-ACK",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "selected-HTTP",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "hazards",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "input-faults",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "CSE-recovery",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "observer-latency",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "HTTP-demo",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "rendered-browser",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "HTTPS-demo",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "HTTPS-certificate-role",
+        "state": "PASS"
+      },
+      {
+        "exit_code": 0,
+        "name": "rendered-HTTPS-browser",
+        "state": "PASS"
+      }
+    ]
+  },
+  "counts": {
+    "Python_unit": 360,
+    "frontend_unit": 15,
+    "browser_driver_unit": 25,
+    "HTTP_browser": 20,
+    "HTTPS_browser": 20,
+    "HTTPS_certificate_role": 8
+  },
+  "runtime": {
+    "CSE": "ACME 2026.5.1",
+    "Python_product": "3.12.16",
+    "Chrome": "157.0.8103.78",
+    "browser_API_TLS": "TLSv1.3",
+    "font_configuration": "PRIVATE_KOREAN_FONT"
+  },
+  "separate_CSE_security": {
+    "tested_commit": "aa79ace",
+    "actual_checks": 11,
+    "state": "PASS",
+    "in_19_step_plan": false,
+    "scope": "ISOLATED_GATEWAY_MTLS_IDENTITY_BINDING_BACKEND_CALLBACK_PRIVATE_HTTP"
+  },
+  "observer_repeat": {
+    "N_measured": 30,
+    "N_warmup": 5,
+    "metric": "Observer_verified_all_acks_ms",
+    "p50_ms": 568.133,
+    "p95_ms": 793.534,
+    "E2E_all_acks_ms": null,
+    "latency_SLO": "NOT_CLAIMED"
+  },
+  "limits": {
+    "input": "SYNTHETIC",
+    "model": "ASSUMED_NOT_CALIBRATED",
+    "MEC": "unavailable",
+    "Hosted": "NOT_CONTACTED",
+    "MEC_IPE": "NOT_IMPLEMENTED",
+    "main_demo_CSE_cert_migration": "NOT_RUN",
+    "MQTTS": "NOT_RUN",
+    "process_partial_dispatch_recovery": "NOT_RUN",
+    "remote_CI": "NOT_VERIFIED",
+    "video": "NOT_RECORDED",
+    "publication": "NOT_PERFORMED"
+  },
+  "review": {
+    "read_only_checks": 51,
+    "original_evidence_in_git": false,
+    "not_a_new_runtime_execution": true
+  },
+  "screenshots": {
+    "clean-http-dashboard.png": {
+      "sha256": "7c421468ebe000e54f36c8cf3dfc340e8281655a827182eac484f757eeb204ee",
+      "kind": "ACTUAL_CHROME_SCREENSHOT_SYNTHETIC_INPUT",
+      "edited": false
+    },
+    "clean-https-mobile.png": {
+      "sha256": "c1cf9ab7e39d3e0fc7701f2b8d37783ec25b10aee88302386ac9fa0ce32daefd",
+      "kind": "ACTUAL_CHROME_SCREENSHOT_SYNTHETIC_INPUT",
+      "edited": false
+    }
+  },
+  "provenance": {
+    "acceptance_run": "20261116-044349Z-18300187",
+    "read_only_review": "20261116-045734Z-5454a876",
+    "raw_child_location": ".runtime/releases/20261116-044349Z-18300187/evidence/",
+    "HTTP_browser_run": "20261116-045113Z-5f421a7c",
+    "HTTPS_browser_run": "20261116-045225Z-8fa9b420",
+    "separate_CSE_security_run": "20261116-040708Z-ba53f73b",
+    "separate_CSE_security_review": "20261116-042739Z-0906daca"
+  }
+}

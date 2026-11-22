@@ -1,4 +1,4 @@
-name: oneM2M foundation and route persistence
+name: FireRoute local acceptance
 
 on:
   push:
@@ -20,19 +20,29 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
       - run: make test-unit
       - run: node --version
       - run: make test-frontend
       - run: make test-scenario
+      - run: make test-browser-driver
+      - run: make hazard-preview
       - run: python -m compileall -q backend onem2m simulator mec infra tests
 
   actual-cse:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
       - run: make compose-check
       - run: make p0-smoke
       - run: make p1-routes
@@ -40,6 +50,10 @@ jobs:
       - run: make p1-dashboard
       - run: make p1-scenario
       - run: make p1-scenario-dashboard
+      - run: make p1-hazards
+      - run: make p1-faults
+      - run: make p1-recovery
+      - run: make p1-latency
       - name: Save local development CSE evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -71,6 +85,62 @@ jobs:
             evidence/**/paused-historical-snapshot.json
             evidence/**/before-reset-status.json
             evidence/**/initial-status.json
+            evidence/**/hazard-stages.jsonl
+            evidence/**/hazard-coverage.json
+            evidence/**/latency-plan.json
+            evidence/**/latency-samples.jsonl
+            evidence/**/latency-report.json
             evidence/**/tests.txt
       - if: always()
         run: make down
+
+  standards-and-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - run: make p1-standards
+      - run: make p1-browser
+      - run: make demo-secure-up
+      - run: make test-https
+      - run: node tests/browser/dashboard.mjs --https
+      - name: Save result summaries only; never role codes/CA keys/browser profiles
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-standards-browser-results
+          path: |
+            evidence/**/summary.json
+            evidence/**/assertions.json
+            evidence/**/discovery.json
+            evidence/**/mqtt.jsonl
+          if-no-files-found: warn
+      - if: always()
+        run: make down standards-down
+
+  cse-certificate-security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: make p1-cse-security
+      - name: Save security results only; never CA/client private keys
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cse-certificate-security-results
+          path: |
+            evidence/**/summary.json
+            evidence/**/assertions.json
+            evidence/**/gateway-denials.json
+          if-no-files-found: warn
+      - if: always()
+        run: make cse-security-down

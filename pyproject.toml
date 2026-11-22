@@ -12,6 +12,9 @@ license = "Apache-2.0"
 license-files = ["LICENSE"]
 dependencies = []
 
+[project.optional-dependencies]
+comparison = ["numpy==2.1.3"]
+
 [project.scripts]
 fire-route-p0 = "backend.p0:main"
 fire-route-p1-routes = "backend.p1_routes:main"
@@ -23,10 +26,14 @@ fire-route-scenario-core = "backend.scenario_core:main"
 include = ["backend*", "onem2m*", "simulator*", "mec*"]
 namespaces = false
 
+[tool.setuptools.package-data]
+"simulator.fire_policy" = ["assets/*.json", "assets/*.csv", "assets/model.zip"]
+
 [tool.setuptools.data-files]
-"share/fire-route/fixtures" = ["fixtures/building_3f.json", "fixtures/evacuation_assumptions.json"]
+"share/fire-route/fixtures" = ["fixtures/building_3f.json", "fixtures/evacuation_assumptions.json", "fixtures/occupancy_assumptions.json"]
 "share/fire-route/frontend" = ["frontend/index.html", "frontend/app.js", "frontend/model.mjs", "frontend/styles.css"]
-"share/fire-route/frontend/scenario" = ["frontend/scenario/index.html", "frontend/scenario/app.js", "frontend/scenario/model.mjs", "frontend/scenario/styles.css"]
+"share/fire-route/frontend/scenario" = ["frontend/scenario/index.html", "frontend/scenario/app.js", "frontend/scenario/model.mjs", "frontend/scenario/building-view.mjs", "frontend/scenario/timeline.mjs", "frontend/scenario/styles.css", "frontend/scenario/locale.js"]
+"share/fire-route/frontend/scenario/model-replay" = ["frontend/scenario/model-replay/replay.html", "frontend/scenario/model-replay/replay.js", "frontend/scenario/model-replay/replay.css", "frontend/scenario/model-replay/offline_replay.js"]
 "share/fire-route/scenarios/fire_evac" = ["simulator/scenarios/fire_evac/README.md", "simulator/scenarios/fire_evac/config.js", "simulator/scenarios/fire_evac/engine.js", "simulator/scenarios/fire_evac/app.js", "simulator/scenarios/fire_evac/index.html", "simulator/scenarios/fire_evac/styles.css", "simulator/scenarios/fire_evac/test_engine.js", "simulator/scenarios/fire_evac/manifest.json"]
 
 [tool.pytest.ini_options]
